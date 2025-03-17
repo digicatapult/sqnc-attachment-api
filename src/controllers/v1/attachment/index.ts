@@ -101,11 +101,13 @@ export class AttachmentController extends Controller {
     @Request() req: express.Request,
     @Query() updated_since?: DATE,
     @Query() owner?: string,
-    @Query() integrityHash?: string
+    @Query() integrityHash?: string,
+    @Query() id?: UUID[]
   ): Promise<Attachment[]> {
     const query: Where<'attachment'> = [
       updated_since && (['updated_at', '>', parseDateParam(updated_since)] as const),
       integrityHash && (['integrity_hash', '=', integrityHash] as const),
+      id && (['id', 'IN', id] as const),
     ].filter((x) => !!x)
 
     if (owner) {

@@ -47,13 +47,15 @@ export type ColumnsByType<M extends TABLE, T> = {
 }[keyof Models[M]['get']]
 
 type WhereComparison<M extends TABLE> = {
-  [key in keyof Models[M]['get']]: Readonly<
-    [
-      Extract<key, string>,
-      '=' | '>' | '>=' | '<' | '<=' | '<>' | 'LIKE' | 'ILIKE',
-      Extract<Models[M]['get'][key], Knex.Value>,
-    ]
-  >
+  [key in keyof Models[M]['get']]:
+    | Readonly<
+        [
+          Extract<key, string>,
+          '=' | '>' | '>=' | '<' | '<=' | '<>' | 'LIKE' | 'ILIKE',
+          Extract<Models[M]['get'][key], Knex.Value>,
+        ]
+      >
+    | Readonly<[Extract<key, string>, 'IN' | 'NOT_IN', Extract<Models[M]['get'][key], Knex.Value>[]]>
 }
 export type WhereMatch<M extends TABLE> = {
   [key in keyof Models[M]['get']]?: Models[M]['get'][key]

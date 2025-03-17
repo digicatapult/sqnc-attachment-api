@@ -190,6 +190,47 @@ describe('attachment', () => {
       ])
     })
 
+    it('filters single attachment by id', async () => {
+      const { status, body } = await get(app, `/v1/attachment?id=${parametersAttachmentId}`)
+      expect(status).to.equal(200)
+      expect(body).to.deep.equal([
+        {
+          createdAt: '2023-01-01T00:00:00.000Z',
+          filename: 'test.txt',
+          id: parametersAttachmentId,
+          integrityHash: 'hash1',
+          owner: 'self',
+          size: 42,
+        },
+      ])
+    })
+
+    it('filters multiple attachments by id', async () => {
+      const { status, body } = await get(
+        app,
+        `/v1/attachment?id=${parametersAttachmentId}&id=${parametersAttachmentId2}`
+      )
+      expect(status).to.equal(200)
+      expect(body).to.deep.equal([
+        {
+          createdAt: '2023-01-01T00:00:00.000Z',
+          filename: 'test.txt',
+          id: parametersAttachmentId,
+          integrityHash: 'hash1',
+          owner: 'self',
+          size: 42,
+        },
+        {
+          createdAt: '2022-01-01T00:00:00.000Z',
+          filename: 'test2.txt',
+          id: parametersAttachmentId2,
+          integrityHash: 'hash2',
+          owner: 'other',
+          size: 42,
+        },
+      ])
+    })
+
     it('returns 401 with invalid token', async () => {
       const { status, body } = await get(app, `/v1/attachment`, {
         authorization: 'bearer invalid',
