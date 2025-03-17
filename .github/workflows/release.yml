@@ -1,0 +1,41 @@
+name: Release (NPM)
+on:
+  push:
+    branches: ['main']
+jobs:
+  static-checks-npm:
+    uses: digicatapult/shared-workflows/.github/workflows/static-checks-npm.yml@main
+    with:
+      matrix_commands: '["lint", "depcheck", "check"]'
+  tests-unit:
+    uses: digicatapult/shared-workflows/.github/workflows/tests-npm.yml@main
+    with:
+      docker_compose_file: ''
+      npm_build_command: 'npm run build:tsoa'
+      tests: '["test:unit"]'
+  tests-integration:
+    uses: digicatapult/shared-workflows/.github/workflows/tests-npm.yml@main
+    with:
+      docker_compose_file: './docker-compose-test.yml'
+      npm_build_command: 'npm run build:tsoa'
+      pre_test_command: 'npm run db:migrate'
+      tests: '["test:integration"]'
+  build-docker:
+    needs: [tests-unit, tests-integration, static-checks-npm]
+    uses: digicatapult/shared-workflows/.github/workflows/build-docker.yml@main
+    with:
+      push_dockerhub: true
+      push_ghcr: true
+    permissions:
+      packages: write
+      contents: write
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.SQNC_DOCKERHUB_TOKEN }}
+      DOCKERHUB_USERNAME: ${{ secrets.SQNC_DOCKERHUB_USERNAME }}
+  release-github:
+    needs: [build-docker]
+    uses: digicatapult/shared-workflows/.github/workflows/release-github.yml@main
+    permissions:
+      contents: write
+      pull-requests: read
+    secrets: inherit
