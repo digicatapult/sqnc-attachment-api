@@ -1,0 +1,11 @@
+ignores: [
+  '@swc-node/register',
+  '@swc/cli',
+  'concurrently',
+  'pino-colada',
+  'nodemon',
+  'pg',
+  'ts-node',
+  '@grpc/grpc-js',
+  '@opentelemetry/auto-instrumentations-node',
+]

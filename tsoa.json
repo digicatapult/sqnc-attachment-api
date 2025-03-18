@@ -1,0 +1,108 @@
+{
+  "entryFile": "src/index.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["src/controllers/**/*.ts"],
+  "spec": {
+    "outputDirectory": "src",
+    "specVersion": 3,
+    "securityDefinitions": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "scopes": []
+          }
+        }
+      }
+    },
+    "specMerging": "recursive",
+    "spec": {
+      "paths": {
+        "/v1/attachment": {
+          "post": {
+            "requestBody": {
+              "required": true,
+              "content": {
+                "multipart/form-data": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "format": "binary"
+                      }
+                    }
+                  }
+                },
+                "application/json": {
+                  "schema": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "example": {
+                          "some": "example JSON"
+                        }
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "example": {
+                            "some": "example JSON"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/v1/attachment/{id}": {
+          "get": {
+            "responses": {
+              "200": {
+                "content": {
+                  "application/octet-stream": {
+                    "schema": {
+                      "description": "Attachment file",
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  },
+                  "application/json": {
+                    "schema": {
+                      "description": "Attachment json",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "example": {
+                            "some": "example JSON"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "example": {
+                              "some": "example JSON"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "routes": {
+    "routesDir": "src",
+    "authenticationModule": "./src/authentication.ts",
+    "iocModule": "src/ioc",
+    "esm": true
+  }
+}

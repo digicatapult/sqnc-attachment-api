@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "sourceMap": true,
+    "declaration": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "outDir": "./build",
+    "esModuleInterop": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/swagger.json"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "test",
+    "**/__test__",
+    "**/__tests__"
+  ]
+}

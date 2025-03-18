@@ -1,0 +1,134 @@
+# sqnc-attachment-api
+
+## Description
+
+An API facilitating file attachment storage in Digital Catapult's [Sequence](https://github.com/digicatapult/sqnc-documentation) (SQNC) ledger-based solution
+
+## Configuration
+
+Use a `.env` at root of the repository to set values for the environment variables defined in `.env` file.
+
+| variable                | required |        default         | description                                                                                                                                           |
+| :---------------------- | :------: | :--------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PORT                    |    N     |         `3000`         | The port for the API to listen on                                                                                                                     |
+| DB_PORT                 |    N     |         `5432`         | The port for the database                                                                                                                             |
+| DB_HOST                 |    Y     |           -            | The database hostname / host                                                                                                                          |
+| DB_NAME                 |    N     | `sqnc-attachment-api ` | The database name                                                                                                                                     |
+| DB_USERNAME             |    Y     |           -            | The database username                                                                                                                                 |
+| DB_PASSWORD             |    Y     |           -            | The database password                                                                                                                                 |
+| IDENTITY_SERVICE_HOST   |    Y     |           -            | Hostname of the `sqnc-identity-service`                                                                                                               |
+| IDENTITY_SERVICE_PORT   |    N     |         `3000`         | Port of the `sqnc-identity-service`                                                                                                                   |
+| LOG_LEVEL               |    N     |         `info`         | Logging level. Valid values are [`trace`, `debug`, `info`, `warn`, `error`, `fatal`]                                                                  |
+| IPFS_HOST               |    Y     |           -            | Hostname of the `IPFS` node to use for metadata storage                                                                                               |
+| IPFS_PORT               |    N     |         `5001`         | Port of the `IPFS` node to use for metadata storage                                                                                                   |
+| WATCHER_POLL_PERIOD_MS  |    N     |        `10000`         | Number of ms between polling of service state                                                                                                         |
+| WATCHER_TIMEOUT_MS      |    N     |         `2000`         | Timeout period in ms for service state                                                                                                                |
+| API_SWAGGER_BG_COLOR    |    N     |       `#fafafa`        | CSS \_color\* val for UI bg ( try: [e4f2f3](https://coolors.co/e4f2f3) , [e7f6e6](https://coolors.co/e7f6e6) or [f8dddd](https://coolors.co/f8dddd) ) |
+| API_SWAGGER_TITLE       |    N     |     `IdentityAPI`      | String used to customise the title of the html page                                                                                                   |
+| API_SWAGGER_HEADING     |    N     |   `IdentityService`    | String used to customise the H2 heading                                                                                                               |
+| IDP_CLIENT_ID           |    Y     |           -            | OAuth2 client-id to use when validating authentication headers                                                                                        |
+| IDP_PUBLIC_URL_PREFIX   |    Y     |           -            | URL prefix to apply to access the IDP endpoints from the public internet                                                                              |
+| IDP_INTERNAL_URL_PREFIX |    Y     |           -            | URL prefix to apply to access the IDP endpoints from within the Sequence deployment's network                                                         |
+| IDP_TOKEN_PATH          |    N     |        `/token`        | Path to append to the appropriate prefix to determine the OAuth2 token endpoint                                                                       |
+| IDP_JWKS_PATH           |    N     |        `/certs`        | Path to append to the appropriate prefix to determine the OAuth2 JWKS endpoint                                                                        |
+
+## Getting started
+
+```sh
+# start dependencies
+docker compose up -d
+# install packages
+npm i
+# run migrations
+npm run db:migrate
+# start service in dev mode. In order to start in full - npm start"
+npm run dev
+```
+
+If you want to see telemetry (this brings up jaeger and exports logs to it)
+
+```sh
+# start dependencies with
+docker-compose -f ./docker-compose.yml -f ./docker-compose.telemetry.yml up -d
+# install packages
+npm i
+# run migrations
+npm run db:migrate
+# start service in dev mode. In order to start in full - npm start"
+npm run dev:telemetry
+```
+
+View OpenAPI documentation for all routes with Swagger:
+
+```
+localhost:3000/swagger/
+```
+
+## Database
+
+> before performing any database interactions like clean/migrate make sure you have database running e.g. docker-compose up -d
+> or any local instance if not using docker
+
+```sh
+# running migrations
+npm run db:migrate
+
+# creating new migration
+## install npx globally
+npm i -g knex
+## make new migration with some prefixes
+npx knex migrate:make attachment-table
+```
+
+## Tests
+
+Unit tests are executed by calling:
+
+```sh
+npm run test:unit
+```
+
+Integration tests require the test dependency services be brought up using docker:
+
+```sh
+# start dependencies
+docker compose -f ./docker-compose-test.yml up -d
+# install packages
+npm ci
+# run migrations
+npm run db:migrate
+```
+
+Integration tests are then executed by calling (tests are set up in a way where we are a proxy for Dave by default):
+
+```sh
+npm run test:integration
+```
+
+## API design
+
+`sqnc-attachment-api` provides a RESTful OpenAPI-based interface for third parties and front-ends to interact with attachments in `Sequence` (SQNC). The design prioritises:
+
+1. RESTful design principles:
+   - all endpoints describing discrete operations on path derived entities.
+   - use of HTTP verbs to describe whether state is modified, whether the action is idempotent etc.
+   - HTTP response codes indicating the correct status of the request.
+   - HTTP response bodies including the details of a query response or details about the entity being created/modified.
+2. Simplicity of structure. The API should be easily understood by a third party and traversable.
+3. Simplicity of usage:
+   - all APIs that take request bodies taking a JSON structured request with the exception of attachment upload (which is idiomatically represented as a multipart form).
+   - all APIs which return a body returning a JSON structured response (again with the exception of attachments.
+4. Abstraction of the underlying DLT components. This means no token Ids, no block numbers etc.
+5. Conflict free identifiers. All identifiers must be conflict free as updates can come from third party organisations.
+
+### Authentication
+
+The API is authenticated and should be accessed with an OAuth2 JWT Bearer token obtained following the OAuth2 client-credentials flow against the deployment's identity-provider.
+
+### Attachment entities
+
+The top level entity `attachment`, which accepts a `multipart/form-data` payload for uploading a file or `application/json` for uploading JSON as a file. This will return an `id` that can then be used when preparing entity updates to attach files.
+
+- `POST /v1/attachment` - upload a file.
+- `GET /v1/attachment` - list attachments.
+- `GET /v1/attachment/{attachmentId}` - download an attachment.
