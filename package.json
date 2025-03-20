@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -39,7 +39,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.0",
     "@eslint/js": "^9.22.0",
-    "@swc-node/register": "^1.10.9",
+    "@swc-node/register": "^1.10.10",
     "@swc/cli": "^0.6.0",
     "@types/chai": "^5.2.0",
     "@types/cors": "^2.8.17",
@@ -67,12 +67,12 @@
     "supertest": "^7.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2",
-    "undici": "^7.4.0"
+    "undici": "^7.5.0"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.13.0",
     "@opentelemetry/auto-instrumentations-node": "^0.56.1",
-    "@digicatapult/tsoa-oauth-express": "^0.1.107",
+    "@digicatapult/tsoa-oauth-express": "^0.1.108",
     "@tsoa/runtime": "^6.6.0",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
