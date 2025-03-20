@@ -17,14 +17,24 @@ describe('health checks', function () {
   })
 
   it('returns 200 along with the report', async () => {
+    const packageVersion = process.env.npm_package_version ? process.env.npm_package_version : 'unknown'
+
     const { status, body } = await get(app, '/health')
     expect(status).to.equal(200)
+
+    const semverRegex = /^\d+\.\d+\.\d+$/
+    const ipfsVersion = body['details']['ipfs']['detail']['version']
+    const identityVersion = body['details']['identity']['detail']['version']
+
+    expect(ipfsVersion).to.match(semverRegex, `ipfsVersion "${ipfsVersion}" does not follow SemVer`)
+    expect(identityVersion).to.match(semverRegex, `identityVersion "${identityVersion}" does not follow SemVer`)
+
     expect(body).to.deep.equal({
       status: 'ok',
-      version: '1.0.0',
+      version: packageVersion,
       details: {
-        ipfs: { status: 'ok', detail: { version: '2.0.0', peerCount: 1 } },
-        identity: { status: 'ok', detail: { version: '1.0.0' } },
+        ipfs: { status: 'ok', detail: { version: ipfsVersion, peerCount: 1 } },
+        identity: { status: 'ok', detail: { version: identityVersion } },
       },
     })
   })
