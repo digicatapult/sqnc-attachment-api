@@ -1,4 +1,4 @@
-import { describe, before, it } from 'mocha'
+import { describe, it } from 'mocha'
 import { expect } from 'chai'
 import { Express } from 'express'
 
@@ -17,11 +17,14 @@ describe('health checks', function () {
   })
 
   it('returns 200 along with the report', async () => {
+    const packageVersion = process.env.npm_package_version ? process.env.npm_package_version : 'unknown'
+
     const { status, body } = await get(app, '/health')
     expect(status).to.equal(200)
+
     expect(body).to.deep.equal({
       status: 'ok',
-      version: '1.0.0',
+      version: packageVersion,
       details: {
         ipfs: { status: 'ok', detail: { version: '2.0.0', peerCount: 1 } },
         identity: { status: 'ok', detail: { version: '1.0.0' } },
