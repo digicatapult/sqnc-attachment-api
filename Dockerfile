@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.14
-FROM node:lts-alpine as builder
+FROM node:lts-alpine AS builder
 
 WORKDIR /sqnc-attachment-api
 
@@ -14,7 +14,7 @@ COPY . .
 RUN npm run build
 
 # service
-FROM node:lts-alpine as service
+FROM node:lts-alpine AS service
 
 WORKDIR /sqnc-attachment-api
 

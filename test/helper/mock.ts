@@ -32,7 +32,7 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
         method: 'POST',
       })
       .reply(200, {
-        Objects: [{ Links: [{ Hash: 'file_hash', Name: 'test' }] }],
+        Objects: [{ Links: [{ Hash: 'file_hash', Name: 'json' }] }],
       })
     if (fileContent) {
       mockIpfs
@@ -99,6 +99,7 @@ export const withIdentityMock = (context: MockContext) => {
         alias: 'self',
         address: selfAddress,
       })
+      .persist()
 
     mockIdentity
       .intercept({
@@ -109,6 +110,7 @@ export const withIdentityMock = (context: MockContext) => {
         alias: 'self',
         address: selfAddress,
       })
+      .persist()
 
     mockIdentity
       .intercept({
@@ -119,6 +121,7 @@ export const withIdentityMock = (context: MockContext) => {
         alias: 'self',
         address: selfAddress,
       })
+      .persist()
 
     mockIdentity
       .intercept({
@@ -129,6 +132,7 @@ export const withIdentityMock = (context: MockContext) => {
         alias: 'other',
         address: notSelfAddress,
       })
+      .persist()
 
     mockIdentity
       .intercept({
@@ -139,6 +143,7 @@ export const withIdentityMock = (context: MockContext) => {
         alias: 'other',
         address: notSelfAddress,
       })
+      .persist()
   })
 
   afterEach(function () {
