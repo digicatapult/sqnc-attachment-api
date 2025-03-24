@@ -187,6 +187,7 @@ export class AttachmentController extends Controller {
     try {
       return internalAttachmentCreateBodyParser.parse(body)
     } catch (err) {
+      this.log.warn('Invalid body for internal attachment creation: %s', err instanceof Error ? err.message : 'unknown')
       throw new BadRequest('Invalid body for internal attachment creation')
     }
   }
