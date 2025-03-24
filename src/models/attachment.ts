@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { UUID } from './strings.js'
 
 /**
@@ -21,3 +22,9 @@ export interface Attachment {
   size: number | null
   createdAt: Date
 }
+
+export const internalAttachmentCreateBodyParser = z.object({
+  integrity_hash: z.string(),
+  ownerAddress: z.string(),
+})
+export type InternalAttachmentCreateBody = z.infer<typeof internalAttachmentCreateBodyParser>

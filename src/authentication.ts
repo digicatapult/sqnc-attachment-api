@@ -1,20 +1,32 @@
 import type express from 'express'
-import type * as jwt from 'jsonwebtoken'
 
-import mkExpressAuthentication, { AuthOptions } from '@digicatapult/tsoa-oauth-express'
+import mkExpressAuthentication, { mergeAcceptAny } from '@digicatapult/tsoa-oauth-express'
 
 import env from './env.js'
-const { IDP_INTERNAL_URL_PREFIX, IDP_JWKS_PATH } = env
 
-const exampleOptions: AuthOptions = {
-  verifyOptions: {},
-  jwksUri: () => Promise.resolve(`${IDP_INTERNAL_URL_PREFIX}${IDP_JWKS_PATH}`),
-  getAccessToken: (req: express.Request) => Promise.resolve(req.headers['authorization']?.substring('bearer '.length)),
-  getScopesFromToken: async (decoded: string | jwt.JwtPayload) => {
-    const scopes = ((decoded as jwt.JwtPayload).scopes as string) || ''
-    return scopes.split(' ')
-  },
-  tryRefreshTokens: () => Promise.resolve(false),
-}
-
-export const expressAuthentication = mkExpressAuthentication(exampleOptions)
+export const expressAuthentication = mergeAcceptAny([
+  mkExpressAuthentication({
+    verifyOptions: {},
+    securityName: 'oauth2',
+    jwksUri: () =>
+      Promise.resolve(`${env.IDP_INTERNAL_ORIGIN}/realms/${env.IDP_OAUTH2_REALM}/protocol/openid-connect/certs`),
+    getAccessToken: (req: express.Request) =>
+      Promise.resolve(req.headers['authorization']?.substring('bearer '.length)),
+    getScopesFromToken: async (decoded) => {
+      const scopes = typeof decoded === 'string' ? '' : `${decoded.scopes}`
+      return scopes.split(' ')
+    },
+  }),
+  mkExpressAuthentication({
+    verifyOptions: {},
+    securityName: 'internal',
+    jwksUri: () =>
+      Promise.resolve(`${env.IDP_INTERNAL_ORIGIN}/realms/${env.IDP_INTERNAL_REALM}/protocol/openid-connect/certs`),
+    getAccessToken: (req: express.Request) =>
+      Promise.resolve(req.headers['authorization']?.substring('bearer '.length)),
+    getScopesFromToken: async (decoded) => {
+      const scopes = typeof decoded === 'string' ? '' : `${decoded.scopes}`
+      return scopes.split(' ')
+    },
+  }),
+])

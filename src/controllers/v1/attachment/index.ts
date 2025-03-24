@@ -20,7 +20,7 @@ import { Readable } from 'node:stream'
 
 import { logger } from '../../../lib/logger.js'
 import Database from '../../../lib/db/index.js'
-import type { Attachment } from '../../../models/attachment.js'
+import { internalAttachmentCreateBodyParser, type Attachment } from '../../../models/attachment.js'
 import { BadRequest, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
@@ -65,6 +65,7 @@ const parseAccept = (acceptHeader: string) =>
 @Route('v1/attachment')
 @Tags('attachment')
 @Security('oauth2')
+@Security('internal')
 export class AttachmentController extends Controller {
   log: Logger
   ipfs: Ipfs = new Ipfs({
@@ -136,6 +137,10 @@ export class AttachmentController extends Controller {
     @Request() req: express.Request,
     @UploadedFile() file?: Express.Multer.File
   ): Promise<Attachment> {
+    if (!file && req.user.securityName === 'internal') {
+      return this.createInternal(req)
+    }
+
     this.log.debug(`creating an attachment filename: ${file?.originalname || 'json'}`)
 
     if (!req.body && !file) throw new BadRequest('nothing to upload')
@@ -160,6 +165,32 @@ export class AttachmentController extends Controller {
     return this.transformAttachment(req, res)
   }
 
+  private async createInternal(req: express.Request): Promise<Attachment> {
+    this.log.debug('creating an internal attachment')
+    this.log.trace('attachment create body %j', req.body)
+
+    const { ownerAddress, integrity_hash: integrityHash } = this.parseInternalCreateBody(req.body)
+
+    this.log.debug(`creating an internal attachment with hash: ${integrityHash} for owner: ${ownerAddress}`)
+
+    const [res] = await this.db.insert('attachment', {
+      owner: ownerAddress,
+      integrity_hash: integrityHash,
+      filename: null,
+      size: null,
+    })
+
+    return this.transformAttachment(req, res)
+  }
+
+  private parseInternalCreateBody(body: unknown) {
+    try {
+      return internalAttachmentCreateBodyParser.parse(body)
+    } catch (err) {
+      throw new BadRequest('Invalid body for internal attachment creation')
+    }
+  }
+
   @Get('/{id}')
   @Response<NotFound>(404)
   @Response<BadRequest>(400)
@@ -170,14 +201,16 @@ export class AttachmentController extends Controller {
     this.log.debug(`attempting to retrieve ${id} attachment`)
     const [attachment] = await this.db.get('attachment', { id })
     if (!attachment) throw new NotFound('attachment')
-    const { filename, integrity_hash: ipfsHash, size } = attachment
 
-    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(ipfsHash)
+    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
     const blobBuffer = Buffer.from(await blob.arrayBuffer())
 
+    let { filename, size } = attachment
     if (size === null || filename === null) {
       try {
         await this.db.update('attachment', { id }, { filename: ipfsFilename, size: blob.size })
+        filename = ipfsFilename
+        size = blob.size
       } catch (err) {
         const message = err instanceof Error ? err.message : 'unknown'
         this.log.warn('Error updating attachment size: %s', message)

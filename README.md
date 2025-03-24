@@ -8,29 +8,29 @@ An API facilitating file attachment storage in Digital Catapult's [Sequence](htt
 
 Use a `.env` at root of the repository to set values for the environment variables defined in `.env` file.
 
-| variable                | required |        default         | description                                                                                                                                           |
-| :---------------------- | :------: | :--------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PORT                    |    N     |         `3000`         | The port for the API to listen on                                                                                                                     |
-| DB_PORT                 |    N     |         `5432`         | The port for the database                                                                                                                             |
-| DB_HOST                 |    Y     |           -            | The database hostname / host                                                                                                                          |
-| DB_NAME                 |    N     | `sqnc-attachment-api ` | The database name                                                                                                                                     |
-| DB_USERNAME             |    Y     |           -            | The database username                                                                                                                                 |
-| DB_PASSWORD             |    Y     |           -            | The database password                                                                                                                                 |
-| IDENTITY_SERVICE_HOST   |    Y     |           -            | Hostname of the `sqnc-identity-service`                                                                                                               |
-| IDENTITY_SERVICE_PORT   |    N     |         `3000`         | Port of the `sqnc-identity-service`                                                                                                                   |
-| LOG_LEVEL               |    N     |         `info`         | Logging level. Valid values are [`trace`, `debug`, `info`, `warn`, `error`, `fatal`]                                                                  |
-| IPFS_HOST               |    Y     |           -            | Hostname of the `IPFS` node to use for metadata storage                                                                                               |
-| IPFS_PORT               |    N     |         `5001`         | Port of the `IPFS` node to use for metadata storage                                                                                                   |
-| WATCHER_POLL_PERIOD_MS  |    N     |        `10000`         | Number of ms between polling of service state                                                                                                         |
-| WATCHER_TIMEOUT_MS      |    N     |         `2000`         | Timeout period in ms for service state                                                                                                                |
-| API_SWAGGER_BG_COLOR    |    N     |       `#fafafa`        | CSS \_color\* val for UI bg ( try: [e4f2f3](https://coolors.co/e4f2f3) , [e7f6e6](https://coolors.co/e7f6e6) or [f8dddd](https://coolors.co/f8dddd) ) |
-| API_SWAGGER_TITLE       |    N     |     `IdentityAPI`      | String used to customise the title of the html page                                                                                                   |
-| API_SWAGGER_HEADING     |    N     |   `IdentityService`    | String used to customise the H2 heading                                                                                                               |
-| IDP_CLIENT_ID           |    Y     |           -            | OAuth2 client-id to use when validating authentication headers                                                                                        |
-| IDP_PUBLIC_URL_PREFIX   |    Y     |           -            | URL prefix to apply to access the IDP endpoints from the public internet                                                                              |
-| IDP_INTERNAL_URL_PREFIX |    Y     |           -            | URL prefix to apply to access the IDP endpoints from within the Sequence deployment's network                                                         |
-| IDP_TOKEN_PATH          |    N     |        `/token`        | Path to append to the appropriate prefix to determine the OAuth2 token endpoint                                                                       |
-| IDP_JWKS_PATH           |    N     |        `/certs`        | Path to append to the appropriate prefix to determine the OAuth2 JWKS endpoint                                                                        |
+| variable               | required |        default         | description                                                                                                                                           |
+| :--------------------- | :------: | :--------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PORT                   |    N     |         `3000`         | The port for the API to listen on                                                                                                                     |
+| DB_PORT                |    N     |         `5432`         | The port for the database                                                                                                                             |
+| DB_HOST                |    Y     |           -            | The database hostname / host                                                                                                                          |
+| DB_NAME                |    N     | `sqnc-attachment-api ` | The database name                                                                                                                                     |
+| DB_USERNAME            |    Y     |           -            | The database username                                                                                                                                 |
+| DB_PASSWORD            |    Y     |           -            | The database password                                                                                                                                 |
+| IDENTITY_SERVICE_HOST  |    Y     |           -            | Hostname of the `sqnc-identity-service`                                                                                                               |
+| IDENTITY_SERVICE_PORT  |    N     |         `3000`         | Port of the `sqnc-identity-service`                                                                                                                   |
+| LOG_LEVEL              |    N     |         `info`         | Logging level. Valid values are [`trace`, `debug`, `info`, `warn`, `error`, `fatal`]                                                                  |
+| IPFS_HOST              |    Y     |           -            | Hostname of the `IPFS` node to use for metadata storage                                                                                               |
+| IPFS_PORT              |    N     |         `5001`         | Port of the `IPFS` node to use for metadata storage                                                                                                   |
+| WATCHER_POLL_PERIOD_MS |    N     |        `10000`         | Number of ms between polling of service state                                                                                                         |
+| WATCHER_TIMEOUT_MS     |    N     |         `2000`         | Timeout period in ms for service state                                                                                                                |
+| API_SWAGGER_BG_COLOR   |    N     |       `#fafafa`        | CSS \_color\* val for UI bg ( try: [e4f2f3](https://coolors.co/e4f2f3) , [e7f6e6](https://coolors.co/e7f6e6) or [f8dddd](https://coolors.co/f8dddd) ) |
+| API_SWAGGER_TITLE      |    N     |     `IdentityAPI`      | String used to customise the title of the html page                                                                                                   |
+| API_SWAGGER_HEADING    |    N     |   `IdentityService`    | String used to customise the H2 heading                                                                                                               |
+| IDP_CLIENT_ID          |    Y     |           -            | OAuth2 client-id to use in swagger-ui                                                                                                                 |
+| IDP_PUBLIC_ORIGIN      |    Y     |           -            | Origin of IDP from outside the cluster                                                                                                                |
+| IDP_INTERNAL_ORIGIN    |    Y     |           -            | Origin of IDP from inside the cluster                                                                                                                 |
+| IDP_OAUTH2_REALM       |    Y     |           -            | Realm to use when authenticating external users                                                                                                       |
+| IDP_INTERNAL_REALM     |    Y     |           -            | Realm to use when authenticating cluster internal users                                                                                               |
 
 ## Getting started
 
