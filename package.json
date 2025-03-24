@@ -58,7 +58,6 @@
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.3",
     "globals": "^16.0.0",
-    "jsonwebtoken": "^9.0.2",
     "mocha": "^11.1.0",
     "nodemon": "^3.1.9",
     "pino-colada": "^2.2.2",
