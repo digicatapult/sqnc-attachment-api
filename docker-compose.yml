@@ -89,7 +89,7 @@ services:
     restart: on-failure
 
   ipfs:
-    image: ipfs/go-ipfs:v0.33.2
+    image: ipfs/go-ipfs:v0.34.0
     container_name: ipfs
     environment:
       - |
