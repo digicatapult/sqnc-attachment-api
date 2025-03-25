@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -62,7 +62,7 @@
     "nodemon": "^3.1.9",
     "pino-colada": "^2.2.2",
     "prettier": "^3.5.3",
-    "sinon": "^19.0.4",
+    "sinon": "^20.0.0",
     "supertest": "^7.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2",
