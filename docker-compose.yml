@@ -20,8 +20,10 @@ services:
       - IPFS_HOST=ipfs
       - IDENTITY_SERVICE_HOST=identity-service
       - IDP_CLIENT_ID=sequence
-      - IDP_PUBLIC_URL_PREFIX=http://localhost:3080/realms/sequence/protocol/openid-connect
-      - IDP_INTERNAL_URL_PREFIX=http://keycloak:8080/realms/sequence/protocol/openid-connect
+      - IDP_PUBLIC_ORIGIN=http://localhost:3080
+      - IDP_INTERNAL_ORIGIN=http://keycloak:8080
+      - IDP_OAUTH2_REALM=sequence
+      - IDP_INTERNAL_REALM=internal
 
   postgres-attachment-api:
     image: postgres:17.4-alpine
