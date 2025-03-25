@@ -13,6 +13,8 @@ import {
   Produces,
   ValidateError,
   Query,
+  Delete,
+  Hidden,
 } from 'tsoa'
 import { Logger } from 'pino'
 import express from 'express'
@@ -64,8 +66,6 @@ const parseAccept = (acceptHeader: string) =>
 @injectable()
 @Route('v1/attachment')
 @Tags('attachment')
-@Security('oauth2')
-@Security('internal')
 export class AttachmentController extends Controller {
   log: Logger
   ipfs: Ipfs = new Ipfs({
@@ -97,6 +97,8 @@ export class AttachmentController extends Controller {
   }
 
   @Get('/')
+  @Security('oauth2')
+  @Security('internal')
   @SuccessResponse(200, 'returns all attachments')
   public async get(
     @Request() req: express.Request,
@@ -131,6 +133,8 @@ export class AttachmentController extends Controller {
   }
 
   @Post('/')
+  @Security('oauth2')
+  @Security('internal')
   @SuccessResponse(201, 'attachment has been created')
   @Response<ValidateError>(422, 'Validation Failed')
   public async create(
@@ -169,7 +173,7 @@ export class AttachmentController extends Controller {
     this.log.debug('creating an internal attachment')
     this.log.trace('attachment create body %j', req.body)
 
-    const { ownerAddress, integrity_hash: integrityHash } = this.parseInternalCreateBody(req.body)
+    const { ownerAddress, integrityHash } = this.parseInternalCreateBody(req.body)
 
     this.log.debug(`creating an internal attachment with hash: ${integrityHash} for owner: ${ownerAddress}`)
 
@@ -193,6 +197,8 @@ export class AttachmentController extends Controller {
   }
 
   @Get('/{id}')
+  @Security('oauth2')
+  @Security('internal')
   @Response<NotFound>(404)
   @Response<BadRequest>(400)
   @Produces('application/json')
@@ -239,14 +245,30 @@ export class AttachmentController extends Controller {
     return this.octetResponse(blobBuffer, filename || ipfsFilename)
   }
 
+  @Delete('/{id}')
+  @Hidden()
+  @Security('internal')
+  @Response<NotFound>(404)
+  @SuccessResponse(204)
+  public async delete(@Path() id: UUID): Promise<void> {
+    this.log.debug(`Deleting attachment ${id}`)
+
+    const [attachment] = await this.db.get('attachment', { id })
+    if (!attachment) throw new NotFound(id)
+
+    await this.db.delete('attachment', { id })
+    return
+  }
+
   private async transformAttachments(req: express.Request, result: AttachmentRow[]) {
     return Promise.all(result.map((a) => this.transformAttachment(req, a)))
   }
 
   private async transformAttachment(req: express.Request, result: AttachmentRow) {
     const { owner: ownerAddr, id, filename, created_at: createdAt, integrity_hash: integrityHash, size } = result
-    if (this.memoisedIdentities.has(ownerAddr)) {
-      return { owner: this.memoisedIdentities.get(ownerAddr), id, filename, size, createdAt, integrityHash }
+    const alias = this.memoisedIdentities.get(ownerAddr)
+    if (alias) {
+      return { owner: alias, id, filename, size, createdAt, integrityHash }
     }
 
     try {
@@ -256,6 +278,7 @@ export class AttachmentController extends Controller {
     } catch (err) {
       if (err instanceof NotFound) {
         this.log.warn('Invalid owner detected in db: %s', ownerAddr)
+        return { owner: ownerAddr, id, filename, size, createdAt, integrityHash }
       }
       throw new UnknownError()
     }
