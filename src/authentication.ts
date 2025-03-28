@@ -9,7 +9,9 @@ export const expressAuthentication = mergeAcceptAny([
     verifyOptions: {},
     securityName: 'oauth2',
     jwksUri: () =>
-      Promise.resolve(`${env.IDP_INTERNAL_ORIGIN}/realms/${env.IDP_OAUTH2_REALM}/protocol/openid-connect/certs`),
+      Promise.resolve(
+        `${env.IDP_INTERNAL_ORIGIN}${env.IDP_PATH_PREFIX}/realms/${env.IDP_OAUTH2_REALM}/protocol/openid-connect/certs`
+      ),
     getAccessToken: (req: express.Request) =>
       Promise.resolve(req.headers['authorization']?.substring('bearer '.length)),
     getScopesFromToken: async (decoded) => {
@@ -21,7 +23,9 @@ export const expressAuthentication = mergeAcceptAny([
     verifyOptions: {},
     securityName: 'internal',
     jwksUri: () =>
-      Promise.resolve(`${env.IDP_INTERNAL_ORIGIN}/realms/${env.IDP_INTERNAL_REALM}/protocol/openid-connect/certs`),
+      Promise.resolve(
+        `${env.IDP_INTERNAL_ORIGIN}${env.IDP_PATH_PREFIX}/realms/${env.IDP_INTERNAL_REALM}/protocol/openid-connect/certs`
+      ),
     getAccessToken: (req: express.Request) =>
       Promise.resolve(req.headers['authorization']?.substring('bearer '.length)),
     getScopesFromToken: async (decoded) => {
