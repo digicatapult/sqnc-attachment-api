@@ -29,6 +29,7 @@ Use a `.env` at root of the repository to set values for the environment variabl
 | IDP_CLIENT_ID          |    Y     |           -            | OAuth2 client-id to use in swagger-ui                                                                                                                 |
 | IDP_PUBLIC_ORIGIN      |    Y     |           -            | Origin of IDP from outside the cluster                                                                                                                |
 | IDP_INTERNAL_ORIGIN    |    Y     |           -            | Origin of IDP from inside the cluster                                                                                                                 |
+| IDP_PATH_PREFIX        |    N     |        `/auth`         | Path prefix to use when constructing IDP API paths.                                                                                                   |
 | IDP_OAUTH2_REALM       |    Y     |           -            | Realm to use when authenticating external users                                                                                                       |
 | IDP_INTERNAL_REALM     |    Y     |           -            | Realm to use when authenticating cluster internal users                                                                                               |
 

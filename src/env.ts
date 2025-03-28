@@ -34,6 +34,10 @@ const env = envalid.cleanEnv(process.env, {
   IDP_INTERNAL_ORIGIN: envalid.url({
     devDefault: 'http://localhost:3080',
   }),
+  IDP_PATH_PREFIX: envalid.str({
+    default: '/auth',
+    devDefault: '',
+  }),
   IDP_OAUTH2_REALM: envalid.str({
     devDefault: 'sequence',
   }),
