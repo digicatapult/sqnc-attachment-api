@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -73,7 +73,7 @@
     "@opentelemetry/auto-instrumentations-node": "^0.57.0",
     "@digicatapult/tsoa-oauth-express": "^1.0.5",
     "@tsoa/runtime": "^6.6.0",
-    "body-parser": "^1.20.3",
+    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "envalid": "^8.0.0",
