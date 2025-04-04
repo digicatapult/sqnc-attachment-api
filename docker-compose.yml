@@ -61,7 +61,7 @@ services:
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.1.0
+    image: digicatapult/sqnc-identity-service:v4.1.3
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -85,7 +85,7 @@ services:
       - IDP_INTERNAL_REALM=internal
 
   sqnc-node:
-    image: digicatapult/sqnc-node:v12.3.0
+    image: digicatapult/sqnc-node:v12.4.0
     container_name: node
     command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
     ports:
