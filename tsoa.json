@@ -13,6 +13,14 @@
             "scopes": []
           }
         }
+      },
+      "internal": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "scopes": []
+          }
+        }
       }
     },
     "specMerging": "recursive",

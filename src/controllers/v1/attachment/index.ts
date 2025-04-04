@@ -13,6 +13,8 @@ import {
   Produces,
   ValidateError,
   Query,
+  Delete,
+  Hidden,
 } from 'tsoa'
 import { Logger } from 'pino'
 import express from 'express'
@@ -20,7 +22,7 @@ import { Readable } from 'node:stream'
 
 import { logger } from '../../../lib/logger.js'
 import Database from '../../../lib/db/index.js'
-import type { Attachment } from '../../../models/attachment.js'
+import { internalAttachmentCreateBodyParser, type Attachment } from '../../../models/attachment.js'
 import { BadRequest, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
@@ -64,7 +66,6 @@ const parseAccept = (acceptHeader: string) =>
 @injectable()
 @Route('v1/attachment')
 @Tags('attachment')
-@Security('oauth2')
 export class AttachmentController extends Controller {
   log: Logger
   ipfs: Ipfs = new Ipfs({
@@ -96,6 +97,8 @@ export class AttachmentController extends Controller {
   }
 
   @Get('/')
+  @Security('oauth2')
+  @Security('internal')
   @SuccessResponse(200, 'returns all attachments')
   public async get(
     @Request() req: express.Request,
@@ -130,12 +133,18 @@ export class AttachmentController extends Controller {
   }
 
   @Post('/')
+  @Security('oauth2')
+  @Security('internal')
   @SuccessResponse(201, 'attachment has been created')
   @Response<ValidateError>(422, 'Validation Failed')
   public async create(
     @Request() req: express.Request,
     @UploadedFile() file?: Express.Multer.File
   ): Promise<Attachment> {
+    if (!file && req.user.securityName === 'internal') {
+      return this.createInternal(req)
+    }
+
     this.log.debug(`creating an attachment filename: ${file?.originalname || 'json'}`)
 
     if (!req.body && !file) throw new BadRequest('nothing to upload')
@@ -160,7 +169,36 @@ export class AttachmentController extends Controller {
     return this.transformAttachment(req, res)
   }
 
+  private async createInternal(req: express.Request): Promise<Attachment> {
+    this.log.debug('creating an internal attachment')
+    this.log.trace('attachment create body %j', req.body)
+
+    const { ownerAddress, integrityHash } = this.parseInternalCreateBody(req.body)
+
+    this.log.debug(`creating an internal attachment with hash: ${integrityHash} for owner: ${ownerAddress}`)
+
+    const [res] = await this.db.insert('attachment', {
+      owner: ownerAddress,
+      integrity_hash: integrityHash,
+      filename: null,
+      size: null,
+    })
+
+    return this.transformAttachment(req, res)
+  }
+
+  private parseInternalCreateBody(body: unknown) {
+    try {
+      return internalAttachmentCreateBodyParser.parse(body)
+    } catch (err) {
+      this.log.warn('Invalid body for internal attachment creation: %s', err instanceof Error ? err.message : 'unknown')
+      throw new BadRequest('Invalid body for internal attachment creation')
+    }
+  }
+
   @Get('/{id}')
+  @Security('oauth2')
+  @Security('internal')
   @Response<NotFound>(404)
   @Response<BadRequest>(400)
   @Produces('application/json')
@@ -170,14 +208,16 @@ export class AttachmentController extends Controller {
     this.log.debug(`attempting to retrieve ${id} attachment`)
     const [attachment] = await this.db.get('attachment', { id })
     if (!attachment) throw new NotFound('attachment')
-    const { filename, integrity_hash: ipfsHash, size } = attachment
 
-    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(ipfsHash)
+    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
     const blobBuffer = Buffer.from(await blob.arrayBuffer())
 
+    let { filename, size } = attachment
     if (size === null || filename === null) {
       try {
         await this.db.update('attachment', { id }, { filename: ipfsFilename, size: blob.size })
+        filename = ipfsFilename
+        size = blob.size
       } catch (err) {
         const message = err instanceof Error ? err.message : 'unknown'
         this.log.warn('Error updating attachment size: %s', message)
@@ -205,14 +245,30 @@ export class AttachmentController extends Controller {
     return this.octetResponse(blobBuffer, filename || ipfsFilename)
   }
 
+  @Delete('/{id}')
+  @Hidden()
+  @Security('internal')
+  @Response<NotFound>(404)
+  @SuccessResponse(204)
+  public async delete(@Path() id: UUID): Promise<void> {
+    this.log.debug(`Deleting attachment ${id}`)
+
+    const [attachment] = await this.db.get('attachment', { id })
+    if (!attachment) throw new NotFound(id)
+
+    await this.db.delete('attachment', { id })
+    return
+  }
+
   private async transformAttachments(req: express.Request, result: AttachmentRow[]) {
     return Promise.all(result.map((a) => this.transformAttachment(req, a)))
   }
 
   private async transformAttachment(req: express.Request, result: AttachmentRow) {
     const { owner: ownerAddr, id, filename, created_at: createdAt, integrity_hash: integrityHash, size } = result
-    if (this.memoisedIdentities.has(ownerAddr)) {
-      return { owner: this.memoisedIdentities.get(ownerAddr), id, filename, size, createdAt, integrityHash }
+    const alias = this.memoisedIdentities.get(ownerAddr)
+    if (alias) {
+      return { owner: alias, id, filename, size, createdAt, integrityHash }
     }
 
     try {
@@ -222,6 +278,7 @@ export class AttachmentController extends Controller {
     } catch (err) {
       if (err instanceof NotFound) {
         this.log.warn('Invalid owner detected in db: %s', ownerAddr)
+        return { owner: ownerAddr, id, filename, size, createdAt, integrityHash }
       }
       throw new UnknownError()
     }

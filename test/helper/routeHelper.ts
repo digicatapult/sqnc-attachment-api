@@ -8,8 +8,8 @@ const accessTokenParser = z.object({
   access_token: z.string(),
 })
 
-const getToken = async () => {
-  const tokenReq = await fetch('http://localhost:3080/realms/sequence/protocol/openid-connect/token', {
+const getToken = async (realm: 'internal' | 'sequence' = 'sequence') => {
+  const tokenReq = await fetch(`http://localhost:3080/realms/${realm}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -54,6 +54,47 @@ export const post = async (
     ...headers,
   }
   return request(app).post(endpoint).send(body).set(headersWithToken)
+}
+
+export const postInternal = async (
+  app: express.Express,
+  endpoint: string,
+  body: object,
+  headers: Record<string, string> = {}
+): Promise<request.Test> => {
+  const token = await getToken('internal')
+  const headersWithToken = {
+    authorization: `bearer ${token}`,
+    ...headers,
+  }
+  return request(app).post(endpoint).send(body).set(headersWithToken)
+}
+
+export const del = async (
+  app: express.Express,
+  endpoint: string,
+
+  headers: Record<string, string> = {}
+): Promise<request.Test> => {
+  const token = await getToken()
+  const headersWithToken = {
+    authorization: `bearer ${token}`,
+    ...headers,
+  }
+  return request(app).delete(endpoint).send().set(headersWithToken)
+}
+
+export const delInternal = async (
+  app: express.Express,
+  endpoint: string,
+  headers: Record<string, string> = {}
+): Promise<request.Test> => {
+  const token = await getToken('internal')
+  const headersWithToken = {
+    authorization: `bearer ${token}`,
+    ...headers,
+  }
+  return request(app).delete(endpoint).send().set(headersWithToken)
 }
 
 export const postFile = async (

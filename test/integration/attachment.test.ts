@@ -3,9 +3,9 @@ import { Express } from 'express'
 import { expect } from 'chai'
 
 import createHttpServer from '../../src/server.js'
-import { get, post, postFile } from '../helper/routeHelper.js'
+import { del, delInternal, get, post, postFile, postInternal } from '../helper/routeHelper.js'
 
-import { withIpfsMockError, withIpfsMock, MockContext, withIdentityMock } from '../helper/mock.js'
+import { withIpfsMockError, withIpfsMock, MockContext, withIdentityMock, selfAddress } from '../helper/mock.js'
 import { cleanup, parametersAttachmentId, attachmentSeed, parametersAttachmentId2 } from '../seeds/attachment.seed.js'
 import supertest from 'supertest'
 
@@ -16,6 +16,7 @@ describe('attachment', () => {
   const overSize = 115343360
   const overSizeBlobData = 'a'.repeat(overSize)
   const jsonData = { key: 'it', filename: 'JSON attachment it' }
+  const jsonDataInternal = { integrityHash: 'hash1', ownerAddress: selfAddress }
   let app: Express
 
   const context: MockContext = {}
@@ -332,6 +333,176 @@ describe('attachment', () => {
     })
   })
 
+  // this test ensures if we perform an "internal" body request but as an external part it is NOT
+  // treated as an internal upload. Instead the file is uploaded as a json file
+  describe('uploads and retrieves an attachment [internal body as json]', () => {
+    let jsonRes: supertest.Response
+
+    withIpfsMock(jsonDataInternal, context)
+
+    beforeEach(async () => {
+      jsonRes = await post(app, '/v1/attachment', jsonDataInternal)
+    })
+
+    it('confirms JSON upload', () => {
+      // assert JSON
+      expect(jsonRes.status).to.equal(201)
+      expect(jsonRes.body).to.contain.keys(['id', 'createdAt'])
+      expect(jsonRes.body.filename).to.equal('json')
+    })
+
+    it('returns JSON attachment', async () => {
+      const { id } = jsonRes.body
+      const { status, body } = await get(app, `/v1/attachment/${id}`, { accept: 'application/json' })
+
+      expect(status).to.equal(200)
+      expect(body).to.contain(jsonDataInternal)
+    })
+  })
+
+  describe('uploads and retrieves an attachment [internal]', () => {
+    let jsonRes: supertest.Response
+
+    withIpfsMock(jsonData, context)
+
+    beforeEach(async () => {
+      jsonRes = await postInternal(app, '/v1/attachment', jsonDataInternal)
+    })
+
+    it('returns a valid attachment response', () => {
+      expect(jsonRes.status).to.equal(201)
+      expect(jsonRes.body).to.contain.keys(['id', 'createdAt', 'integrityHash', 'owner', 'size', 'filename'])
+      expect(jsonRes.body.filename).to.equal(null)
+      expect(jsonRes.body.size).to.equal(null)
+      expect(jsonRes.body.owner).to.equal('self')
+      expect(jsonRes.body.integrityHash).to.equal('hash1')
+    })
+
+    it('is included in attachment list', async () => {
+      const { id } = jsonRes.body
+      const { status, body } = await get(app, `/v1/attachment?id=${id}`)
+
+      expect(status).to.equal(200)
+      expect(body.length).to.equal(1)
+      expect(body[0]).to.deep.equal({
+        id: jsonRes.body.id,
+        createdAt: jsonRes.body.createdAt,
+        integrityHash: 'hash1',
+        owner: 'self',
+        size: null,
+        filename: null,
+      })
+    })
+
+    it('returns JSON attachment', async () => {
+      const { id } = jsonRes.body
+      const { status, body } = await get(app, `/v1/attachment/${id}`, { accept: 'application/json' })
+
+      expect(status).to.equal(200)
+      expect(body).to.deep.contain(jsonData)
+    })
+  })
+
+  describe('delete attachment [internal]', () => {
+    let jsonRes: supertest.Response
+
+    beforeEach(async () => {
+      await attachmentSeed()
+      jsonRes = await delInternal(app, `/v1/attachment/${parametersAttachmentId}`)
+    })
+
+    it('should succeed 204', () => {
+      expect(jsonRes.status).to.equal(204)
+    })
+
+    it('removes attachment from list', async () => {
+      const { status, body } = await get(app, `/v1/attachment`)
+      expect(status).to.equal(200)
+      expect(body).to.deep.equal([
+        {
+          createdAt: '2022-01-01T00:00:00.000Z',
+          filename: 'test2.txt',
+          id: parametersAttachmentId2,
+          integrityHash: 'hash2',
+          owner: 'other',
+          size: 42,
+        },
+      ])
+    })
+  })
+
+  describe('delete non-existant attachment [internal]', () => {
+    let jsonRes: supertest.Response
+
+    beforeEach(async () => {
+      await attachmentSeed()
+      jsonRes = await delInternal(app, `/v1/attachment/bad9ad47-91c3-446e-90f9-a7c9b233ebad`)
+    })
+
+    it('should succeed 204', () => {
+      expect(jsonRes.status).to.equal(404)
+    })
+
+    it("doesn't modify attachments", async () => {
+      const { status, body } = await get(app, `/v1/attachment`)
+      expect(status).to.equal(200)
+      expect(body).to.deep.equal([
+        {
+          createdAt: '2023-01-01T00:00:00.000Z',
+          filename: 'test.txt',
+          id: parametersAttachmentId,
+          integrityHash: 'hash1',
+          owner: 'self',
+          size: 42,
+        },
+        {
+          createdAt: '2022-01-01T00:00:00.000Z',
+          filename: 'test2.txt',
+          id: parametersAttachmentId2,
+          integrityHash: 'hash2',
+          owner: 'other',
+          size: 42,
+        },
+      ])
+    })
+  })
+
+  describe('delete attachment [oauth2]', () => {
+    let jsonRes: supertest.Response
+
+    beforeEach(async () => {
+      await attachmentSeed()
+      jsonRes = await del(app, `/v1/attachment/${parametersAttachmentId}`)
+    })
+
+    it('should fail 401', () => {
+      expect(jsonRes.status).to.equal(401)
+    })
+
+    it("doesn't modify attachments", async () => {
+      const { status, body } = await get(app, `/v1/attachment`)
+      expect(status).to.equal(200)
+      expect(body).to.deep.equal([
+        {
+          createdAt: '2023-01-01T00:00:00.000Z',
+          filename: 'test.txt',
+          id: parametersAttachmentId,
+          integrityHash: 'hash1',
+          owner: 'self',
+          size: 42,
+        },
+        {
+          createdAt: '2022-01-01T00:00:00.000Z',
+          filename: 'test2.txt',
+          id: parametersAttachmentId2,
+          integrityHash: 'hash2',
+          owner: 'other',
+          size: 42,
+        },
+      ])
+    })
+  })
+
   describe('uploads errors', () => {
     it('returns 401 with invalid token', async () => {
       const { status, body } = await postFile(app, '/v1/attachment', Buffer.from(blobData), filename, {
@@ -350,6 +521,13 @@ describe('attachment', () => {
 
       expect(status).to.equal(422)
       expect(body.toString()).to.deep.contain({ message: 'Validation failed' })
+    })
+
+    it('returns 400 with invalid internal create', async () => {
+      const { status, body } = await postInternal(app, '/v1/attachment', { integrityHash: 'hash1' }) // missing ownerAddress
+
+      expect(status).to.equal(400)
+      expect(body).to.equal('Invalid body for internal attachment creation')
     })
   })
 

@@ -20,8 +20,11 @@ services:
       - IPFS_HOST=ipfs
       - IDENTITY_SERVICE_HOST=identity-service
       - IDP_CLIENT_ID=sequence
-      - IDP_PUBLIC_URL_PREFIX=http://localhost:3080/realms/sequence/protocol/openid-connect
-      - IDP_INTERNAL_URL_PREFIX=http://keycloak:8080/realms/sequence/protocol/openid-connect
+      - IDP_PUBLIC_ORIGIN=http://localhost:3080
+      - IDP_INTERNAL_ORIGIN=http://keycloak:8080
+      - IDP_PATH_PREFIX=
+      - IDP_OAUTH2_REALM=sequence
+      - IDP_INTERNAL_REALM=internal
 
   postgres-attachment-api:
     image: postgres:17.4-alpine
@@ -58,7 +61,7 @@ services:
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:latest
+    image: digicatapult/sqnc-identity-service:v4.1.0
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -75,11 +78,14 @@ services:
       - DB_PASSWORD=postgres
       - SELF_ADDRESS=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
       - IDP_CLIENT_ID=sequence
-      - IDP_PUBLIC_URL_PREFIX=http://localhost:3080/realms/sequence/protocol/openid-connect
-      - IDP_INTERNAL_URL_PREFIX=http://keycloak:8080/realms/sequence/protocol/openid-connect
+      - IDP_PUBLIC_ORIGIN=http://localhost:3080
+      - IDP_INTERNAL_ORIGIN=http://keycloak:8080
+      - IDP_PATH_PREFIX=
+      - IDP_OAUTH2_REALM=sequence
+      - IDP_INTERNAL_REALM=internal
 
   sqnc-node:
-    image: digicatapult/sqnc-node:latest
+    image: digicatapult/sqnc-node:v12.3.0
     container_name: node
     command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
     ports:
@@ -89,7 +95,7 @@ services:
     restart: on-failure
 
   ipfs:
-    image: ipfs/go-ipfs:v0.33.2
+    image: ipfs/go-ipfs:v0.34.1
     container_name: ipfs
     environment:
       - |
