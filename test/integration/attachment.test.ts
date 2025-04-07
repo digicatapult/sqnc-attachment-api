@@ -37,6 +37,16 @@ describe('attachment', () => {
   })
 
   describe('invalid requests', () => {
+    it('returns 422 when attempting to retrieve by not UUID', async () => {
+      const { status, body } = await get(app, '/v1/attachment/not-uuid')
+
+      expect(status).to.equal(422)
+      expect(body).to.have.keys(['fields', 'message', 'name'])
+      expect(body).to.contain({
+        name: 'ValidateError',
+        message: 'Validation failed',
+      })
+    })
     it('returns 404 if no records found', async () => {
       const { status, body } = await get(app, '/v1/attachment/afe7e60a-2fd8-43f9-9867-041f14e3e8f4')
 
