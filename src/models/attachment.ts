@@ -37,13 +37,13 @@ export const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3
 export type AttachmentId = string
 
 /**
- * IPFS Content Identifier (CID) hash
+ * File integrity hash
  * @example QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN
- * @pattern ^[a-zA-Z0-9]{1,44}$
+ * @pattern ^[a-zA-Z0-9]+$
  */
 export type AttachmentHash = string
 
 /**
- * Either an attachment UUID or an IPFS hash
+ * Either an attachment UUID or an file integrity hash
  */
 export type AttachmentIdOrHash = AttachmentId | AttachmentHash
