@@ -204,10 +204,25 @@ export class AttachmentController extends Controller {
   @Produces('application/json')
   @Produces('application/octet-stream')
   @SuccessResponse(200)
-  public async getById(@Request() req: express.Request, @Path() id: UUID): Promise<unknown | Readable> {
-    this.log.debug(`attempting to retrieve ${id} attachment`)
-    const [attachment] = await this.db.get('attachment', { id })
-    if (!attachment) throw new NotFound('attachment')
+  public async getById(@Request() req: express.Request, @Path() id: UUID | string): Promise<unknown | Readable> {
+    this.log.debug(`attempting to retrieve attachment with id or hash: ${id}`)
+    let attachment: AttachmentRow | undefined = undefined
+
+    const isValidUUID = (str: string) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      return uuidRegex.test(str)
+    }
+    if (isValidUUID(id)) {
+      // If it's a UUID, query by id
+      ;[attachment] = await this.db.get('attachment', { id })
+    } else {
+      // If it's not a UUID, assume it's a hash and query by integrity_hash
+      ;[attachment] = await this.db.get('attachment', { integrity_hash: id })
+    }
+
+    if (!attachment) {
+      throw new NotFound('attachment')
+    }
 
     const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
     const blobBuffer = Buffer.from(await blob.arrayBuffer())

@@ -36,3 +36,17 @@ export const attachmentSeed = async () => {
     updated_at: new Date(exampleDate2),
   })
 }
+
+export const additionalAttachmentSeed = async () => {
+  const db = container.resolve(Database)
+
+  await db.insert('attachment', {
+    id: parametersAttachmentId,
+    filename: 'test4.txt',
+    integrity_hash: 'hash1',
+    owner: selfAddress,
+    size: 42,
+    created_at: new Date(exampleDate),
+    updated_at: new Date(exampleDate),
+  })
+}

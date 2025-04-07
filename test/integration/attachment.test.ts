@@ -6,7 +6,13 @@ import createHttpServer from '../../src/server.js'
 import { del, delInternal, get, post, postFile, postInternal } from '../helper/routeHelper.js'
 
 import { withIpfsMockError, withIpfsMock, MockContext, withIdentityMock, selfAddress } from '../helper/mock.js'
-import { cleanup, parametersAttachmentId, attachmentSeed, parametersAttachmentId2 } from '../seeds/attachment.seed.js'
+import {
+  cleanup,
+  parametersAttachmentId,
+  attachmentSeed,
+  parametersAttachmentId2,
+  additionalAttachmentSeed,
+} from '../seeds/attachment.seed.js'
 import supertest from 'supertest'
 
 describe('attachment', () => {
@@ -31,17 +37,6 @@ describe('attachment', () => {
   })
 
   describe('invalid requests', () => {
-    it('returns 422 when attempting to retrieve by not UUID', async () => {
-      const { status, body } = await get(app, '/v1/attachment/not-uuid')
-
-      expect(status).to.equal(422)
-      expect(body).to.have.keys(['fields', 'message', 'name'])
-      expect(body).to.contain({
-        name: 'ValidateError',
-        message: 'Validation failed',
-      })
-    })
-
     it('returns 404 if no records found', async () => {
       const { status, body } = await get(app, '/v1/attachment/afe7e60a-2fd8-43f9-9867-041f14e3e8f4')
 
@@ -401,6 +396,31 @@ describe('attachment', () => {
       expect(status).to.equal(200)
       expect(body).to.deep.contain(jsonData)
     })
+
+    it('returns first attachment when fetching by hash', async () => {
+      const res = await get(app, `/v1/attachment/hash1`, { accept: 'application/json' })
+      expect(res.status).to.equal(200)
+      expect(res.header).to.deep.contain({
+        'content-disposition': 'attachment; filename="json"',
+      })
+    })
+    it('returns first attachment when multiple attachments share the same hash', async () => {
+      await additionalAttachmentSeed()
+      const { status, header } = await get(app, `/v1/attachment/hash1`, {
+        accept: 'application/octet-stream',
+      })
+
+      expect(status).to.equal(200)
+      expect(header).to.deep.contain({
+        'content-disposition': 'attachment; filename="json"', // make sure we are not getting the 2nd file which would have "filename: 'test4.txt',"
+      })
+    })
+    it('returns 404 when hash/UUID is not found', async () => {
+      const { status, body } = await get(app, `/v1/attachment/nonexistenthash`)
+
+      expect(status).to.equal(404)
+      expect(body).to.equal('attachment not found')
+    })
   })
 
   describe('delete attachment [internal]', () => {
@@ -517,10 +537,9 @@ describe('attachment', () => {
 
     it('Doesn`t upload files if more than 100mb', async () => {
       const uploadRes = await postFile(app, '/v1/attachment', Buffer.from(overSizeBlobData), 'json')
-      const { status, body } = await get(app, `/v1/attachment/${uploadRes.body.id}`)
+      const { status } = await get(app, `/v1/attachment/${uploadRes.body.id}`)
 
-      expect(status).to.equal(422)
-      expect(body.toString()).to.deep.contain({ message: 'Validation failed' })
+      expect(status).to.equal(404)
     })
 
     it('returns 400 with invalid internal create', async () => {
