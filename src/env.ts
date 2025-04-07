@@ -28,6 +28,8 @@ const env = envalid.cleanEnv(process.env, {
   API_SWAGGER_TITLE: envalid.str({ default: 'AttachmentAPI' }),
   API_SWAGGER_HEADING: envalid.str({ default: 'AttachmentAPI' }),
   IDP_CLIENT_ID: envalid.str({ devDefault: 'sequence' }),
+  IDP_INTERNAL_CLIENT_ID: envalid.str({ devDefault: 'sequence' }),
+  IDP_INTERNAL_CLIENT_SECRET: envalid.str({ devDefault: 'secret' }),
   IDP_PUBLIC_ORIGIN: envalid.url({
     devDefault: 'http://localhost:3080',
   }),
@@ -43,6 +45,13 @@ const env = envalid.cleanEnv(process.env, {
   }),
   IDP_INTERNAL_REALM: envalid.str({
     devDefault: 'internal',
+  }),
+  IDP_EXTERNAL_REALM: envalid.str({
+    devDefault: 'external',
+  }),
+  AUTHZ_WEBHOOK: envalid.url({
+    default: '',
+    devDefault: 'http://www.example.com/authz',
   }),
 })
 

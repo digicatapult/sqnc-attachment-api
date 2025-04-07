@@ -28,7 +28,7 @@ import {
   uuidRegex,
   type Attachment,
 } from '../../../models/attachment.js'
-import { BadRequest, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
+import { BadRequest, Forbidden, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
 import env from '../../../env.js'
@@ -37,6 +37,9 @@ import { AttachmentRow, Where } from '../../../lib/db/types.js'
 import Identity from '../../../lib/identity.js'
 import { getAuthorization } from '../../../lib/utils/shared.js'
 import { injectable } from 'tsyringe'
+import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
+import { z } from 'zod'
+import Authz from '../../../lib/authz.js'
 
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
@@ -68,6 +71,12 @@ const parseAccept = (acceptHeader: string) =>
     })
     .map(({ mimeType }) => mimeType)
 
+const externalJwtParser = z.object({
+  organisation: z.object({
+    chainAccount: z.string(),
+  }),
+})
+
 @injectable()
 @Route('v1/attachment')
 @Tags('attachment')
@@ -84,7 +93,8 @@ export class AttachmentController extends Controller {
 
   constructor(
     private db: Database,
-    private identity: Identity
+    private identity: Identity,
+    private authz: Authz
   ) {
     super()
     this.log = logger.child({ controller: '/attachment' })
@@ -204,6 +214,7 @@ export class AttachmentController extends Controller {
   @Get('/{idOrHash}')
   @Security('oauth2')
   @Security('internal')
+  @Security('external')
   @Response<NotFound>(404)
   @Response<BadRequest>(400)
   @Produces('application/json')
@@ -213,17 +224,9 @@ export class AttachmentController extends Controller {
     @Request() req: express.Request,
     @Path() idOrHash: AttachmentIdOrHash
   ): Promise<unknown | Readable> {
-    this.log.debug(`attempting to retrieve attachment with id or hash: ${idOrHash}`)
+    this.log.debug(`attempting to retrieve ${idOrHash} attachment`)
 
-    const isValidUUID = (str: string) => {
-      return uuidRegex.test(str)
-    }
-    const where = isValidUUID(idOrHash) ? { id: idOrHash } : { integrity_hash: idOrHash }
-    const [attachment] = await this.db.get('attachment', where)
-
-    if (!attachment) {
-      throw new NotFound('attachment')
-    }
+    const attachment = await this.findAttachmentRecord(idOrHash, req.user)
 
     const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
     const blobBuffer = Buffer.from(await blob.arrayBuffer())
@@ -259,6 +262,32 @@ export class AttachmentController extends Controller {
       }
     }
     return this.octetResponse(blobBuffer, filename || ipfsFilename)
+  }
+
+  private async findAttachmentRecord(idOrHash: AttachmentIdOrHash, user: TsoaExpressUser) {
+    const isUUID = idOrHash.match(uuidRegex)
+    const where = isUUID ? { id: idOrHash } : { integrity_hash: idOrHash }
+    const [attachment] = await this.db.get('attachment', where)
+
+    const isExternal = user.securityName === 'external'
+    if (!attachment && isExternal) {
+      throw new Forbidden()
+    }
+    if (!attachment && !isExternal) {
+      throw new NotFound('attachment')
+    }
+
+    if (!isExternal) {
+      return attachment
+    }
+
+    const parseRes = externalJwtParser.safeParse(user.jwt)
+    if (!parseRes.success) {
+      throw new Forbidden()
+    }
+
+    await this.authz.authorize(attachment.id, parseRes.data.organisation.chainAccount)
+    return attachment
   }
 
   @Delete('/{id}')

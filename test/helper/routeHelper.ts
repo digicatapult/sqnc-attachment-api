@@ -8,7 +8,7 @@ const accessTokenParser = z.object({
   access_token: z.string(),
 })
 
-const getToken = async (realm: 'internal' | 'sequence' = 'sequence') => {
+const getToken = async (realm: 'internal' | 'sequence' | 'external' = 'sequence') => {
   const tokenReq = await fetch(`http://localhost:3080/realms/${realm}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: {
@@ -35,6 +35,19 @@ export const get = async (
   headers: Record<string, string> = {}
 ): Promise<request.Test> => {
   const token = await getToken()
+  const headersWithToken = {
+    authorization: `bearer ${token}`,
+    ...headers,
+  }
+  return request(app).get(endpoint).set(headersWithToken)
+}
+
+export const getExternal = async (
+  app: express.Express,
+  endpoint: string,
+  headers: Record<string, string> = {}
+): Promise<request.Test> => {
+  const token = await getToken('external')
   const headersWithToken = {
     authorization: `bearer ${token}`,
     ...headers,
@@ -70,6 +83,20 @@ export const postInternal = async (
   return request(app).post(endpoint).send(body).set(headersWithToken)
 }
 
+export const postExternal = async (
+  app: express.Express,
+  endpoint: string,
+  body: object,
+  headers: Record<string, string> = {}
+): Promise<request.Test> => {
+  const token = await getToken('external')
+  const headersWithToken = {
+    authorization: `bearer ${token}`,
+    ...headers,
+  }
+  return request(app).post(endpoint).send(body).set(headersWithToken)
+}
+
 export const del = async (
   app: express.Express,
   endpoint: string,
@@ -90,6 +117,19 @@ export const delInternal = async (
   headers: Record<string, string> = {}
 ): Promise<request.Test> => {
   const token = await getToken('internal')
+  const headersWithToken = {
+    authorization: `bearer ${token}`,
+    ...headers,
+  }
+  return request(app).delete(endpoint).send().set(headersWithToken)
+}
+
+export const delExternal = async (
+  app: express.Express,
+  endpoint: string,
+  headers: Record<string, string> = {}
+): Promise<request.Test> => {
+  const token = await getToken('external')
   const headersWithToken = {
     authorization: `bearer ${token}`,
     ...headers,
