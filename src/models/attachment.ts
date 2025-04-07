@@ -39,7 +39,7 @@ export type AttachmentId = string
 /**
  * IPFS Content Identifier (CID) hash
  * @example QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN
-
+ * @pattern ^[a-zA-Z0-9]{1,44}$
  */
 export type AttachmentHash = string
 
