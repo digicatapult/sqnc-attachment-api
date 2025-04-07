@@ -22,7 +22,12 @@ import { Readable } from 'node:stream'
 
 import { logger } from '../../../lib/logger.js'
 import Database from '../../../lib/db/index.js'
-import { internalAttachmentCreateBodyParser, type Attachment } from '../../../models/attachment.js'
+import {
+  type AttachmentIdOrHash,
+  internalAttachmentCreateBodyParser,
+  uuidRegex,
+  type Attachment,
+} from '../../../models/attachment.js'
 import { BadRequest, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
@@ -196,7 +201,7 @@ export class AttachmentController extends Controller {
     }
   }
 
-  @Get('/{id}')
+  @Get('/{idOrHash}')
   @Security('oauth2')
   @Security('internal')
   @Response<NotFound>(404)
@@ -204,21 +209,17 @@ export class AttachmentController extends Controller {
   @Produces('application/json')
   @Produces('application/octet-stream')
   @SuccessResponse(200)
-  public async getById(@Request() req: express.Request, @Path() id: UUID | string): Promise<unknown | Readable> {
-    this.log.debug(`attempting to retrieve attachment with id or hash: ${id}`)
-    let attachment: AttachmentRow | undefined = undefined
+  public async getById(
+    @Request() req: express.Request,
+    @Path() idOrHash: AttachmentIdOrHash
+  ): Promise<unknown | Readable> {
+    this.log.debug(`attempting to retrieve attachment with id or hash: ${idOrHash}`)
 
     const isValidUUID = (str: string) => {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       return uuidRegex.test(str)
     }
-    if (isValidUUID(id)) {
-      // If it's a UUID, query by id
-      ;[attachment] = await this.db.get('attachment', { id })
-    } else {
-      // If it's not a UUID, assume it's a hash and query by integrity_hash
-      ;[attachment] = await this.db.get('attachment', { integrity_hash: id })
-    }
+    const where = isValidUUID(idOrHash) ? { id: idOrHash } : { integrity_hash: idOrHash }
+    const [attachment] = await this.db.get('attachment', where)
 
     if (!attachment) {
       throw new NotFound('attachment')
@@ -230,7 +231,7 @@ export class AttachmentController extends Controller {
     let { filename, size } = attachment
     if (size === null || filename === null) {
       try {
-        await this.db.update('attachment', { id }, { filename: ipfsFilename, size: blob.size })
+        await this.db.update('attachment', { id: attachment.id }, { filename: ipfsFilename, size: blob.size })
         filename = ipfsFilename
         size = blob.size
       } catch (err) {
@@ -247,7 +248,7 @@ export class AttachmentController extends Controller {
             const json = JSON.parse(blobBuffer.toString())
             return json
           } catch (err) {
-            this.log.warn('Unable to parse json file for attachment %s', id)
+            this.log.warn('Unable to parse json file for attachment %s', attachment.id)
             this.log.debug('Parse error: %s', err instanceof Error ? err.message : 'unknown')
             return this.octetResponse(blobBuffer, filename)
           }

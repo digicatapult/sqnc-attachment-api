@@ -398,7 +398,7 @@ describe('attachment', () => {
     })
 
     it('returns first attachment when fetching by hash', async () => {
-      const res = await get(app, `/v1/attachment/hash1`, { accept: 'application/json' })
+      const res = await get(app, `/v1/attachment/hash1`, { accept: 'application/octet-stream' })
       expect(res.status).to.equal(200)
       expect(res.header).to.deep.contain({
         'content-disposition': 'attachment; filename="json"',
