@@ -35,7 +35,6 @@ import env from '../../../env.js'
 import { parseDateParam } from '../../../lib/utils/queryParams.js'
 import { AttachmentRow, Where } from '../../../lib/db/types.js'
 import Identity from '../../../lib/identity.js'
-import { getAuthorization } from '../../../lib/utils/shared.js'
 import { injectable } from 'tsyringe'
 import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
 import { z } from 'zod'
@@ -116,7 +115,6 @@ export class AttachmentController extends Controller {
   @Security('internal')
   @SuccessResponse(200, 'returns all attachments')
   public async get(
-    @Request() req: express.Request,
     @Query() updated_since?: DATE,
     @Query() owner?: string,
     @Query() integrityHash?: string,
@@ -130,7 +128,7 @@ export class AttachmentController extends Controller {
 
     if (owner) {
       try {
-        const identity = await this.identity.getMemberByAlias(owner, getAuthorization(req))
+        const identity = await this.identity.getMemberByAlias(owner)
         this.rememberThem(identity)
         query.push(['owner', '=', identity.address] as const)
       } catch (err) {
@@ -144,7 +142,7 @@ export class AttachmentController extends Controller {
 
     const attachments = await this.db.get('attachment', query)
 
-    return this.transformAttachments(req, attachments)
+    return this.transformAttachments(attachments)
   }
 
   @Post('/')
@@ -170,7 +168,7 @@ export class AttachmentController extends Controller {
 
     const [integrityHash, self] = await Promise.all([
       this.ipfs.addFile.apply(this.ipfs, [{ blob: fileBlob, filename }]),
-      this.identity.getMemberBySelf.apply(this.identity, [getAuthorization(req)]),
+      this.identity.getMemberBySelf.apply(this.identity),
     ])
 
     this.rememberThem(self)
@@ -181,7 +179,7 @@ export class AttachmentController extends Controller {
       size: fileBlob.size,
     })
 
-    return this.transformAttachment(req, res)
+    return this.transformAttachment(res)
   }
 
   private async createInternal(req: express.Request): Promise<Attachment> {
@@ -199,7 +197,7 @@ export class AttachmentController extends Controller {
       size: null,
     })
 
-    return this.transformAttachment(req, res)
+    return this.transformAttachment(res)
   }
 
   private parseInternalCreateBody(body: unknown) {
@@ -281,6 +279,11 @@ export class AttachmentController extends Controller {
       return attachment
     }
 
+    const self = await this.identity.getMemberBySelf()
+    if (attachment.owner !== self.address) {
+      throw new Forbidden()
+    }
+
     const parseRes = externalJwtParser.safeParse(user.jwt)
     if (!parseRes.success) {
       throw new Forbidden()
@@ -305,11 +308,11 @@ export class AttachmentController extends Controller {
     return
   }
 
-  private async transformAttachments(req: express.Request, result: AttachmentRow[]) {
-    return Promise.all(result.map((a) => this.transformAttachment(req, a)))
+  private async transformAttachments(result: AttachmentRow[]) {
+    return Promise.all(result.map((a) => this.transformAttachment(a)))
   }
 
-  private async transformAttachment(req: express.Request, result: AttachmentRow) {
+  private async transformAttachment(result: AttachmentRow) {
     const { owner: ownerAddr, id, filename, created_at: createdAt, integrity_hash: integrityHash, size } = result
     const alias = this.memoisedIdentities.get(ownerAddr)
     if (alias) {
@@ -317,7 +320,7 @@ export class AttachmentController extends Controller {
     }
 
     try {
-      const identity = await this.identity.getMemberByAddress(ownerAddr, getAuthorization(req))
+      const identity = await this.identity.getMemberByAddress(ownerAddr)
       this.rememberThem(identity)
       return { owner: identity.alias, id, filename, size, createdAt, integrityHash }
     } catch (err) {
