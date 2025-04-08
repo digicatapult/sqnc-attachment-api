@@ -155,6 +155,39 @@ export const withIdentityMock = (context: MockContext) => {
   })
 }
 
+export const withAuthzMock = (
+  context: MockContext,
+  code: number = 200,
+  response: Record<string, unknown> = { result: { allow: true } }
+) => {
+  beforeEach(function () {
+    context.originalDispatcher = context.originalDispatcher || getGlobalDispatcher()
+    if (!context.mockAgent) {
+      context.mockAgent = new MockAgent()
+      setGlobalDispatcher(context.mockAgent)
+    }
+
+    const authZUrl = new URL(env.AUTHZ_WEBHOOK)
+    const mockAuthz = context.mockAgent.get(authZUrl.origin)
+
+    mockAuthz
+      .intercept({
+        path: authZUrl.pathname,
+        method: 'POST',
+      })
+      .reply(code, response)
+      .persist()
+  })
+
+  afterEach(function () {
+    if (context.originalDispatcher) {
+      setGlobalDispatcher(context.originalDispatcher)
+      delete context.originalDispatcher
+      delete context.mockAgent
+    }
+  })
+}
+
 export const withHealthyDeps = (context: MockContext) => {
   beforeEach(function () {
     context.originalDispatcher = context.originalDispatcher || getGlobalDispatcher()

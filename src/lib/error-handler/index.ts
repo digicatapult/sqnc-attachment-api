@@ -5,20 +5,6 @@ import { AggregateOAuthError, OauthError } from '@digicatapult/tsoa-oauth-expres
 import { Health } from '../../models/health.js'
 import { logger } from '../logger.js'
 
-/**
- * this should reflect database tables
- */
-interface INotFound {
-  message?: string
-  item: string
-  name: string
-}
-
-interface IBadRequest {
-  message?: string
-  name: string
-}
-
 export class HttpResponse extends Error {
   public code: number
   public message: string
@@ -39,7 +25,7 @@ export class UnknownError extends HttpResponse {
 /**
  * reports that item was not found
  */
-export class NotFound extends HttpResponse implements INotFound {
+export class NotFound extends HttpResponse {
   // TODO once pull of all items is clear update with 'item1' | 'item2'
   public item: string
 
@@ -53,9 +39,18 @@ export class NotFound extends HttpResponse implements INotFound {
 /**
  * indicates that request was invalid e.g. missing parameter
  */
-export class BadRequest extends HttpResponse implements IBadRequest {
+export class BadRequest extends HttpResponse {
   constructor(message = 'bad request') {
     super({ code: 400, message })
+  }
+}
+
+/**
+ * indicates that request was unauthorised
+ */
+export class Forbidden extends HttpResponse {
+  constructor(message = 'Not allowed') {
+    super({ code: 401, message })
   }
 }
 
@@ -76,7 +71,7 @@ export const errorHandler = function errorHandler(
   res: ExResponse,
   next: NextFunction
 ): ExResponse | void {
-  if (err instanceof OauthError || err instanceof AggregateOAuthError) {
+  if (err instanceof OauthError || err instanceof AggregateOAuthError || err instanceof Forbidden) {
     return res.status(401).send({
       message: 'Forbidden',
     })
@@ -97,7 +92,6 @@ export const errorHandler = function errorHandler(
   }
   if (err instanceof HttpResponse) {
     logger.warn('Error thrown in handler: %s', err.message)
-
     return res.status(err.code).json(err.message)
   }
   if (err instanceof Error) {

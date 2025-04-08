@@ -26,15 +26,20 @@ export default async function loadApiSpec(): Promise<unknown> {
   swaggerJson.components.securitySchemes.internal.flows.clientCredentials.tokenUrl = tokenUrlInternal
   swaggerJson.components.securitySchemes.internal.flows.clientCredentials.refreshUrl = tokenUrlInternal
 
+  const tokenUrExternal = `${env.IDP_PUBLIC_ORIGIN}${env.IDP_PATH_PREFIX}/realms/${env.IDP_EXTERNAL_REALM}/protocol/openid-connect/token`
+  swaggerJson.components.securitySchemes.external.flows.clientCredentials.tokenUrl = tokenUrExternal
+  swaggerJson.components.securitySchemes.external.flows.clientCredentials.refreshUrl = tokenUrExternal
+
   // if we're in production, remove the internal security scheme and references to it
   if (process.env.NODE_ENV !== 'dev') {
     delete swaggerJson.components.securitySchemes.internal
+    delete swaggerJson.components.securitySchemes.external
     Object.entries<object>(swaggerJson.paths).forEach(([, methods]) => {
       Object.entries(methods).forEach(([, method]) => {
         const security: unknown[] = method.security
 
         method.security = security.filter((security) => {
-          return security && typeof security === 'object' && !('internal' in security)
+          return security && typeof security === 'object' && 'oauth2' in security
         })
       })
     })

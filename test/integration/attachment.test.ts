@@ -3,9 +3,26 @@ import { Express } from 'express'
 import { expect } from 'chai'
 
 import createHttpServer from '../../src/server.js'
-import { del, delInternal, get, post, postFile, postInternal } from '../helper/routeHelper.js'
+import {
+  del,
+  delExternal,
+  delInternal,
+  get,
+  getExternal,
+  post,
+  postExternal,
+  postFile,
+  postInternal,
+} from '../helper/routeHelper.js'
 
-import { withIpfsMockError, withIpfsMock, MockContext, withIdentityMock, selfAddress } from '../helper/mock.js'
+import {
+  withIpfsMockError,
+  withIpfsMock,
+  MockContext,
+  withIdentityMock,
+  selfAddress,
+  withAuthzMock,
+} from '../helper/mock.js'
 import {
   cleanup,
   parametersAttachmentId,
@@ -246,6 +263,14 @@ describe('attachment', () => {
         message: 'Forbidden',
       })
     })
+
+    it('returns 401 with external auth', async () => {
+      const { status, body } = await getExternal(app, `/v1/attachment`)
+      expect(status).to.equal(401)
+      expect(body).to.contain({
+        message: 'Forbidden',
+      })
+    })
   })
 
   describe('uploads and retrieves attachment [octet]', () => {
@@ -258,7 +283,7 @@ describe('attachment', () => {
     })
 
     it('confirms JSON attachment uploads', () => {
-      // assert octect
+      // assert octet
 
       expect(octetRes.status).to.equal(201)
       expect(octetRes.body).to.have.property('id')
@@ -338,6 +363,26 @@ describe('attachment', () => {
     })
   })
 
+  describe('uploads attachment [external]', () => {
+    let jsonRes: supertest.Response
+
+    withIpfsMock(jsonData, context)
+
+    beforeEach(async () => {
+      jsonRes = await postExternal(app, '/v1/attachment', jsonData)
+    })
+
+    it('should fail 401', () => {
+      expect(jsonRes.status).to.equal(401)
+    })
+
+    it("doesn't modify attachments", async () => {
+      const { status, body } = await get(app, `/v1/attachment`)
+      expect(status).to.equal(200)
+      expect(body).to.deep.equal([])
+    })
+  })
+
   // this test ensures if we perform an "internal" body request but as an external part it is NOT
   // treated as an internal upload. Instead the file is uploaded as a json file
   describe('uploads and retrieves an attachment [internal body as json]', () => {
@@ -414,6 +459,7 @@ describe('attachment', () => {
         'content-disposition': 'attachment; filename="json"',
       })
     })
+
     it('returns first attachment when multiple attachments share the same hash', async () => {
       await additionalAttachmentSeed()
       const { status, header } = await get(app, `/v1/attachment/hash1`, {
@@ -425,11 +471,85 @@ describe('attachment', () => {
         'content-disposition': 'attachment; filename="json"', // make sure we are not getting the 2nd file which would have "filename: 'test4.txt',"
       })
     })
+
     it('returns 404 when hash/UUID is not found', async () => {
       const { status, body } = await get(app, `/v1/attachment/nonexistenthash`)
 
       expect(status).to.equal(404)
       expect(body).to.equal('attachment not found')
+    })
+  })
+
+  describe('upload [oauth2] then retrieves an attachment [external]', () => {
+    let jsonRes: supertest.Response
+
+    withIpfsMock(jsonData, context)
+    withAuthzMock(context)
+
+    beforeEach(async () => {
+      const response = await post(app, '/v1/attachment', jsonData)
+      const hash = response.body.integrityHash
+
+      jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
+    })
+
+    it('should retrieve the file successfully', () => {
+      expect(jsonRes.status).to.equal(200)
+      expect(jsonRes.body).to.deep.contain(jsonData)
+    })
+  })
+
+  describe('upload [oauth2] then retrieves unauthorized attachment (401) [external]', () => {
+    let jsonRes: supertest.Response
+
+    withIpfsMock(jsonData, context)
+    withAuthzMock(context, 401)
+
+    beforeEach(async () => {
+      const response = await post(app, '/v1/attachment', jsonData)
+      const hash = response.body.integrityHash
+
+      jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
+    })
+
+    it('should error unauthorised', () => {
+      expect(jsonRes.status).to.equal(401)
+    })
+  })
+
+  describe('upload [oauth2] then retrieves unauthorized attachment (bad response) [external]', () => {
+    let jsonRes: supertest.Response
+
+    withIpfsMock(jsonData, context)
+    withAuthzMock(context, 200, {})
+
+    beforeEach(async () => {
+      const response = await post(app, '/v1/attachment', jsonData)
+      const hash = response.body.integrityHash
+
+      jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
+    })
+
+    it('should error unauthorised', () => {
+      expect(jsonRes.status).to.equal(401)
+    })
+  })
+
+  describe('upload [oauth2] then retrieves unauthorized attachment (allow: false) [external]', () => {
+    let jsonRes: supertest.Response
+
+    withIpfsMock(jsonData, context)
+    withAuthzMock(context, 200, { result: { allow: false } })
+
+    beforeEach(async () => {
+      const response = await post(app, '/v1/attachment', jsonData)
+      const hash = response.body.integrityHash
+
+      jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
+    })
+
+    it('should error unauthorised', () => {
+      expect(jsonRes.status).to.equal(401)
     })
   })
 
@@ -469,7 +589,7 @@ describe('attachment', () => {
       jsonRes = await delInternal(app, `/v1/attachment/bad9ad47-91c3-446e-90f9-a7c9b233ebad`)
     })
 
-    it('should succeed 204', () => {
+    it('should fail 404', () => {
       expect(jsonRes.status).to.equal(404)
     })
 
@@ -503,6 +623,42 @@ describe('attachment', () => {
     beforeEach(async () => {
       await attachmentSeed()
       jsonRes = await del(app, `/v1/attachment/${parametersAttachmentId}`)
+    })
+
+    it('should fail 401', () => {
+      expect(jsonRes.status).to.equal(401)
+    })
+
+    it("doesn't modify attachments", async () => {
+      const { status, body } = await get(app, `/v1/attachment`)
+      expect(status).to.equal(200)
+      expect(body).to.deep.equal([
+        {
+          createdAt: '2023-01-01T00:00:00.000Z',
+          filename: 'test.txt',
+          id: parametersAttachmentId,
+          integrityHash: 'hash1',
+          owner: 'self',
+          size: 42,
+        },
+        {
+          createdAt: '2022-01-01T00:00:00.000Z',
+          filename: 'test2.txt',
+          id: parametersAttachmentId2,
+          integrityHash: 'hash2',
+          owner: 'other',
+          size: 42,
+        },
+      ])
+    })
+  })
+
+  describe('delete attachment [external]', () => {
+    let jsonRes: supertest.Response
+
+    beforeEach(async () => {
+      await attachmentSeed()
+      jsonRes = await delExternal(app, `/v1/attachment/${parametersAttachmentId}`)
     })
 
     it('should fail 401', () => {

@@ -25,6 +25,9 @@ services:
       - IDP_PATH_PREFIX=
       - IDP_OAUTH2_REALM=sequence
       - IDP_INTERNAL_REALM=internal
+      - IDP_EXTERNAL_REALM=external
+      - IDP_INTERNAL_CLIENT_ID=sequence
+      - IDP_INTERNAL_CLIENT_SECRET=secret
 
   postgres-attachment-api:
     image: postgres:17.4-alpine
