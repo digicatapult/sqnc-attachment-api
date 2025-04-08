@@ -15,7 +15,7 @@ export const expressAuthentication = mergeAcceptAny([
     getAccessToken: (req: express.Request) =>
       Promise.resolve(req.headers['authorization']?.substring('bearer '.length)),
     getScopesFromToken: async (decoded) => {
-      const scopes = typeof decoded === 'string' ? '' : `${decoded.scopes}`
+      const scopes = typeof decoded === 'string' ? '' : `${decoded.scope}`
       return scopes.split(' ')
     },
   }),
@@ -29,7 +29,7 @@ export const expressAuthentication = mergeAcceptAny([
     getAccessToken: (req: express.Request) =>
       Promise.resolve(req.headers['authorization']?.substring('bearer '.length)),
     getScopesFromToken: async (decoded) => {
-      const scopes = typeof decoded === 'string' ? '' : `${decoded.scopes}`
+      const scopes = typeof decoded === 'string' ? '' : `${decoded.scope}`
       return scopes.split(' ')
     },
   }),
@@ -43,7 +43,7 @@ export const expressAuthentication = mergeAcceptAny([
     getAccessToken: (req: express.Request) =>
       Promise.resolve(req.headers['authorization']?.substring('bearer '.length)),
     getScopesFromToken: async (decoded) => {
-      const scopes = typeof decoded === 'string' ? '' : `${decoded.scopes}`
+      const scopes = typeof decoded === 'string' ? '' : `${decoded.scope}`
       return scopes.split(' ')
     },
   }),

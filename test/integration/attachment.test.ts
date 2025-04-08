@@ -512,7 +512,7 @@ describe('attachment', () => {
       jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
     })
 
-    it('should retrieve the file successfully', () => {
+    it('should error unauthorised', () => {
       expect(jsonRes.status).to.equal(401)
     })
   })
@@ -530,7 +530,7 @@ describe('attachment', () => {
       jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
     })
 
-    it('should retrieve the file successfully', () => {
+    it('should error unauthorised', () => {
       expect(jsonRes.status).to.equal(401)
     })
   })
@@ -548,7 +548,7 @@ describe('attachment', () => {
       jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
     })
 
-    it('should retrieve the file successfully', () => {
+    it('should error unauthorised', () => {
       expect(jsonRes.status).to.equal(401)
     })
   })
