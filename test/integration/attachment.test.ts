@@ -20,8 +20,8 @@ import {
   withIpfsMock,
   MockContext,
   withIdentityMock,
-  selfAddress,
   withAuthzMock,
+  notSelfAddress,
 } from '../helper/mock.js'
 import {
   cleanup,
@@ -39,7 +39,7 @@ describe('attachment', () => {
   const overSize = 115343360
   const overSizeBlobData = 'a'.repeat(overSize)
   const jsonData = { key: 'it', filename: 'JSON attachment it' }
-  const jsonDataInternal = { integrityHash: 'hash1', ownerAddress: selfAddress }
+  const jsonDataInternal = { integrityHash: 'hash1', ownerAddress: notSelfAddress }
   let app: Express
 
   const context: MockContext = {}
@@ -424,7 +424,7 @@ describe('attachment', () => {
       expect(jsonRes.body).to.contain.keys(['id', 'createdAt', 'integrityHash', 'owner', 'size', 'filename'])
       expect(jsonRes.body.filename).to.equal(null)
       expect(jsonRes.body.size).to.equal(null)
-      expect(jsonRes.body.owner).to.equal('self')
+      expect(jsonRes.body.owner).to.equal('other')
       expect(jsonRes.body.integrityHash).to.equal('hash1')
     })
 
@@ -438,7 +438,7 @@ describe('attachment', () => {
         id: jsonRes.body.id,
         createdAt: jsonRes.body.createdAt,
         integrityHash: 'hash1',
-        owner: 'self',
+        owner: 'other',
         size: null,
         filename: null,
       })
@@ -496,6 +496,24 @@ describe('attachment', () => {
     it('should retrieve the file successfully', () => {
       expect(jsonRes.status).to.equal(200)
       expect(jsonRes.body).to.deep.contain(jsonData)
+    })
+  })
+
+  describe('create [internal] then retrieves attachment (401) [external]', () => {
+    let jsonRes: supertest.Response
+
+    withIpfsMock(jsonData, context)
+    withAuthzMock(context)
+
+    beforeEach(async () => {
+      const response = await postInternal(app, '/v1/attachment', jsonDataInternal)
+      const hash = response.body.integrityHash
+
+      jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
+    })
+
+    it('should error unauthorised', () => {
+      expect(jsonRes.status).to.equal(401)
     })
   })
 
