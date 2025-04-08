@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -38,7 +38,7 @@
   "homepage": "https://github.com/digicatapult/sqnc-attachment-api#readme",
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.23.0",
+    "@eslint/js": "^9.24.0",
     "@swc-node/register": "^1.10.10",
     "@swc/cli": "^0.6.0",
     "@types/chai": "^5.2.1",
@@ -54,7 +54,7 @@
     "chai": "^5.2.0",
     "concurrently": "^9.1.2",
     "depcheck": "^1.4.7",
-    "eslint": "^9.23.0",
+    "eslint": "^9.24.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
     "globals": "^16.0.0",
@@ -65,13 +65,13 @@
     "sinon": "^20.0.0",
     "supertest": "^7.1.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.2",
+    "typescript": "^5.8.3",
     "undici": "^7.7.0"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.13.2",
     "@opentelemetry/auto-instrumentations-node": "^0.57.0",
-    "@digicatapult/tsoa-oauth-express": "^1.0.5",
+    "@digicatapult/tsoa-oauth-express": "^1.0.7",
     "@tsoa/runtime": "^6.6.0",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
@@ -87,7 +87,7 @@
     "reflect-metadata": "^0.2.2",
     "swagger-ui-express": "^5.0.1",
     "tsoa": "^6.6.0",
-    "tsyringe": "^4.8.0",
+    "tsyringe": "^4.9.1",
     "zod": "^3.24.2"
   }
 }
