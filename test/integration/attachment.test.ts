@@ -22,6 +22,7 @@ import {
   withIdentityMock,
   withAuthzMock,
   notSelfAddress,
+  withAttachmentMock,
 } from '../helper/mock.js'
 import {
   cleanup,
@@ -29,6 +30,7 @@ import {
   attachmentSeed,
   parametersAttachmentId2,
   additionalAttachmentSeed,
+  parametersAttachmentId3,
 } from '../seeds/attachment.seed.js'
 import supertest from 'supertest'
 
@@ -44,13 +46,13 @@ describe('attachment', () => {
 
   const context: MockContext = {}
   withIdentityMock(context)
-
+  withAttachmentMock(context)
   before(async () => {
     app = await createHttpServer()
   })
 
   afterEach(async () => {
-    await cleanup()
+    // await cleanup()
   })
 
   describe('invalid requests', () => {
@@ -741,6 +743,20 @@ describe('attachment', () => {
       const { status, body } = await post(app, '/v1/attachment', jsonData)
       expect(status).to.equal(500)
       expect(body).to.equal('error')
+    })
+  })
+
+  describe.only('external attachment - we are not the owner of the attachment', () => {
+    beforeEach(async () => await attachmentSeed())
+    withIpfsMock(jsonData, context)
+
+    it('returns JSON attachment', async () => {
+      const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
+        accept: 'application/json',
+      })
+      console.log(body)
+      expect(status).to.equal(200)
+      // expect(body).to.deep.contain(jsonData)
     })
   })
 })

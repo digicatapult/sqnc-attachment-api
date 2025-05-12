@@ -17,7 +17,7 @@ import {
   Hidden,
 } from 'tsoa'
 import { Logger } from 'pino'
-import express from 'express'
+import express, { response } from 'express'
 import { Readable } from 'node:stream'
 
 import { logger } from '../../../lib/logger.js'
@@ -39,6 +39,12 @@ import { injectable } from 'tsyringe'
 import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
 import { z } from 'zod'
 import Authz from '../../../lib/authz.js'
+
+type OrgData = {
+  account: string
+  attachmentEndpointAddress: string
+  oidcConfigurationEndpointAddress: string
+}
 
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
@@ -223,21 +229,49 @@ export class AttachmentController extends Controller {
     @Path() idOrHash: AttachmentIdOrHash
   ): Promise<unknown | Readable> {
     this.log.debug(`attempting to retrieve ${idOrHash} attachment`)
+    let blobBuffer: Buffer<ArrayBuffer> | null = null
+    //check if attachment is ours or external
+    const isUUID = idOrHash.match(uuidRegex)
+    const where = isUUID ? { id: idOrHash } : { integrity_hash: idOrHash }
+    const [attachment] = await this.db.get('attachment', where)
 
-    const attachment = await this.findAttachmentRecord(idOrHash, req.user)
-
-    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
-    const blobBuffer = Buffer.from(await blob.arrayBuffer())
+    const isExternal = req.user.securityName === 'external'
+    if (!attachment && isExternal) {
+      throw new Forbidden()
+    }
+    if (!attachment && !isExternal) {
+      throw new NotFound('attachment')
+    }
+    if (!isExternal) {
+      if (attachment.filename === null) {
+        blobBuffer = await this.getAttachmentFromPeer(attachment)
+      }
+    }
 
     let { filename, size } = attachment
-    if (size === null || filename === null) {
-      try {
-        await this.db.update('attachment', { id: attachment.id }, { filename: ipfsFilename, size: blob.size })
-        filename = ipfsFilename
-        size = blob.size
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'unknown'
-        this.log.warn('Error updating attachment size: %s', message)
+    if (blobBuffer == null) {
+      const self = await this.identity.getMemberBySelf()
+      if (attachment.owner !== self.address) {
+        throw new Forbidden()
+      }
+
+      const parseRes = externalJwtParser.safeParse(req.user.jwt)
+      if (!parseRes.success) {
+        throw new Forbidden()
+      }
+      // await to see if it fails
+      await this.authz.authorize(attachment.id, parseRes.data.organisation.chainAccount)
+      const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
+      blobBuffer = Buffer.from(await blob.arrayBuffer())
+      if (size === null || filename === null) {
+        try {
+          await this.db.update('attachment', { id: attachment.id }, { filename: ipfsFilename, size: blob.size })
+          filename = ipfsFilename
+          size = blob.size
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'unknown'
+          this.log.warn('Error updating attachment size: %s', message)
+        }
       }
     }
 
@@ -259,7 +293,7 @@ export class AttachmentController extends Controller {
         }
       }
     }
-    return this.octetResponse(blobBuffer, filename || ipfsFilename)
+    return this.octetResponse(blobBuffer, filename || 'external') // what do we return here instead?
   }
 
   private async findAttachmentRecord(idOrHash: AttachmentIdOrHash, user: TsoaExpressUser) {
@@ -276,7 +310,29 @@ export class AttachmentController extends Controller {
     }
 
     if (!isExternal) {
-      return attachment
+      // if it's ours return
+      if (attachment.filename !== null) {
+        return attachment
+      }
+      const orgData = await this.identity.getOrganisationDataByAddress(attachment.owner)
+      // preconfigure the oidc endpoints so I can connect to them
+      const oidcConfig = await this.getOidcConfig(orgData.oidcConfigurationEndpointAddress)
+      const accessToken = await this.getAccessToken(
+        oidcConfig.token_endpoint,
+        env.IDP_INTERNAL_CLIENT_ID,
+        env.IDP_INTERNAL_CLIENT_SECRET
+      )
+
+      const attachmentBlob = await this.fetchAttachment(
+        `${orgData.attachmentEndpointAddress}/attachment/${attachment.id}`,
+        accessToken
+      )
+
+      // const textDecoder = new TextDecoder('utf-8')
+      // const jsonString = textDecoder.decode(attachmentBlob)
+      // const json = JSON.parse(jsonString)
+      // return json
+      return attachmentBlob
     }
 
     const self = await this.identity.getMemberBySelf()
@@ -335,5 +391,73 @@ export class AttachmentController extends Controller {
   private rememberThem({ alias, address }: { alias: string; address: string }) {
     this.memoisedIdentities.set(alias, address)
     this.memoisedIdentities.set(address, alias)
+  }
+
+  private async getOidcConfig(oidcConfigUrl: string) {
+    const response = await fetch(`${oidcConfigUrl}/sequence/.well-known/openid-configuration`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch OIDC configuration')
+    }
+    return response.json()
+  }
+
+  private async getAccessToken(tokenUrl: string, clientId: string, clientSecret: string) {
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to obtain access token')
+    }
+
+    const data = await response.json()
+    return data.access_token
+  }
+  private async fetchAttachment(attachmentUrl: string, accessToken: string) {
+    try {
+      const response = await fetch(attachmentUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch attachment')
+      }
+      // const arrayBuffer = await response.arrayBuffer()
+      // const attachmentData = new Uint8Array(arrayBuffer)
+      // return attachmentData
+      const blobBuffer = Buffer.from(await response.arrayBuffer())
+      return blobBuffer
+    } catch (err) {
+      this.log.error('Error fetching attachment: %s', err instanceof Error ? err.message : 'unknown')
+      throw err
+    }
+  }
+
+  private async getAttachmentFromPeer(attachment: AttachmentRow): Promise<Buffer<ArrayBuffer>> {
+    const orgData = await this.identity.getOrganisationDataByAddress(attachment.owner)
+    // preconfigure the oidc endpoints so I can connect to them
+    const oidcConfig = await this.getOidcConfig(orgData.oidcConfigurationEndpointAddress)
+    const accessToken = await this.getAccessToken(
+      oidcConfig.token_endpoint,
+      env.IDP_INTERNAL_CLIENT_ID,
+      env.IDP_INTERNAL_CLIENT_SECRET
+    )
+
+    const attachmentBlob = await this.fetchAttachment(
+      `${orgData.attachmentEndpointAddress}/attachment/${attachment.id}`,
+      accessToken
+    )
+
+    return attachmentBlob
   }
 }

@@ -3,6 +3,7 @@ import env from '../../src/env.js'
 
 export const selfAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'
 export const notSelfAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
+export const bobAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
 
 export type MockContext = {
   originalDispatcher?: Dispatcher
@@ -34,7 +35,16 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
       .reply(200, {
         Objects: [{ Links: [{ Hash: 'file_hash', Name: 'json' }] }],
       })
+
     if (fileContent) {
+      mockIpfs
+        .intercept({
+          path: `/api/v0/ls?arg=QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN`,
+          method: 'POST',
+        })
+        .reply(200, {
+          Objects: [{ Links: [{ Hash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN', Name: 'json' }] }],
+        })
       mockIpfs
         .intercept({
           path: '/api/v0/cat?arg=file_hash',
@@ -144,6 +154,17 @@ export const withIdentityMock = (context: MockContext) => {
         address: notSelfAddress,
       })
       .persist()
+    mockIdentity
+      .intercept({
+        path: `/v1/members/${bobAddress}/org-data`,
+        method: 'GET',
+      })
+      .reply(200, {
+        account: bobAddress,
+        attachmentEndpointAddress: 'http://localhost:3004/v1',
+        oidcConfigurationEndpointAddress: 'http://localhost:3080/realms',
+      })
+      .persist()
   })
 
   afterEach(function () {
@@ -232,6 +253,42 @@ export const withHealthyDeps = (context: MockContext) => {
           },
         ],
       })
+  })
+
+  afterEach(function () {
+    if (context.originalDispatcher) {
+      setGlobalDispatcher(context.originalDispatcher)
+      delete context.originalDispatcher
+      delete context.mockAgent
+    }
+  })
+}
+
+export const withAttachmentMock = (context: MockContext) => {
+  beforeEach(function () {
+    context.originalDispatcher = context.originalDispatcher || getGlobalDispatcher()
+    if (!context.mockAgent) {
+      context.mockAgent = new MockAgent()
+      setGlobalDispatcher(context.mockAgent)
+    }
+
+    const mockAttachment = context.mockAgent.get('http://localhost:3004')
+
+    mockAttachment
+      .intercept({
+        path: '/v1/attachment/5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
+        method: 'GET',
+      })
+      .reply(200, {
+        id: '5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
+        integrity_hash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
+        owner: '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+        filename: 'json',
+        size: 11,
+        created_at: '2025-05-07T15:48:48.774Z',
+        updated_at: '2025-05-07T15:48:48.774Z',
+      })
+      .persist()
   })
 
   afterEach(function () {
