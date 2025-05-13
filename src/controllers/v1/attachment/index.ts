@@ -40,12 +40,6 @@ import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
 import { z } from 'zod'
 import Authz from '../../../lib/authz.js'
 
-type OrgData = {
-  account: string
-  attachmentEndpointAddress: string
-  oidcConfigurationEndpointAddress: string
-}
-
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
     .split(',')
@@ -230,41 +224,16 @@ export class AttachmentController extends Controller {
   ): Promise<unknown | Readable> {
     this.log.debug(`attempting to retrieve ${idOrHash} attachment`)
     let blobBuffer: Buffer<ArrayBuffer> | null = null
-    //check if attachment is ours or external
-    const isUUID = idOrHash.match(uuidRegex)
-    const where = isUUID ? { id: idOrHash } : { integrity_hash: idOrHash }
-    const [attachment] = await this.db.get('attachment', where)
-
-    const isExternal = req.user.securityName === 'external'
-    if (!attachment && isExternal) {
-      throw new Forbidden()
+    const attachment = await this.findAttachmentRecord(idOrHash, req.user)
+    const self = await this.identity.getMemberBySelf()
+    if (attachment.owner !== self.address) {
+      blobBuffer = await this.getAttachmentFromPeer(attachment)
     }
-    if (!attachment && !isExternal) {
-      throw new NotFound('attachment')
-    }
-    if (!isExternal) {
-      if (attachment.filename === null) {
-        blobBuffer = await this.getAttachmentFromPeer(attachment)
-      }
-    }
-
     let { filename, size } = attachment
-    if (blobBuffer == null) {
-      if (isExternal) {
-        const self = await this.identity.getMemberBySelf()
-        if (attachment.owner !== self.address) {
-          throw new Forbidden()
-        }
-
-        const parseRes = externalJwtParser.safeParse(req.user.jwt)
-        if (!parseRes.success) {
-          throw new Forbidden()
-        }
-        // await to see if it fails
-        await this.authz.authorize(attachment.id, parseRes.data.organisation.chainAccount)
-      }
+    if (blobBuffer === null) {
       const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
       blobBuffer = Buffer.from(await blob.arrayBuffer())
+
       if (size === null || filename === null) {
         try {
           await this.db.update('attachment', { id: attachment.id }, { filename: ipfsFilename, size: blob.size })
@@ -295,9 +264,8 @@ export class AttachmentController extends Controller {
         }
       }
     }
-    return this.octetResponse(blobBuffer, filename || 'external') // what do we return here instead?
+    return this.octetResponse(blobBuffer, filename || 'external')
   }
-  // not used anymore keeping as reference for conditions
   private async findAttachmentRecord(idOrHash: AttachmentIdOrHash, user: TsoaExpressUser) {
     const isUUID = idOrHash.match(uuidRegex)
     const where = isUUID ? { id: idOrHash } : { integrity_hash: idOrHash }
@@ -312,29 +280,7 @@ export class AttachmentController extends Controller {
     }
 
     if (!isExternal) {
-      // if it's ours return
-      if (attachment.filename !== null) {
-        return attachment
-      }
-      const orgData = await this.identity.getOrganisationDataByAddress(attachment.owner)
-      // preconfigure the oidc endpoints so I can connect to them
-      const oidcConfig = await this.getOidcConfig(orgData.oidcConfigurationEndpointAddress)
-      const accessToken = await this.getAccessToken(
-        oidcConfig.token_endpoint,
-        env.IDP_INTERNAL_CLIENT_ID,
-        env.IDP_INTERNAL_CLIENT_SECRET
-      )
-
-      const attachmentBlob = await this.fetchAttachment(
-        `${orgData.attachmentEndpointAddress}/attachment/${attachment.id}`,
-        accessToken
-      )
-
-      // const textDecoder = new TextDecoder('utf-8')
-      // const jsonString = textDecoder.decode(attachmentBlob)
-      // const json = JSON.parse(jsonString)
-      // return json
-      return attachmentBlob
+      return attachment
     }
 
     const self = await this.identity.getMemberBySelf()
@@ -434,9 +380,6 @@ export class AttachmentController extends Controller {
       if (!response.ok) {
         throw new Error('Failed to fetch attachment')
       }
-      // const arrayBuffer = await response.arrayBuffer()
-      // const attachmentData = new Uint8Array(arrayBuffer)
-      // return attachmentData
       const blobBuffer = Buffer.from(await response.arrayBuffer())
       return blobBuffer
     } catch (err) {
