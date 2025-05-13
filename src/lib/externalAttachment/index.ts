@@ -13,7 +13,7 @@ export class ExternalAttachmentService {
     this.log = logger.child({ service: 'ExternalAttachment' })
   }
 
-  private async getOidcConfig(oidcConfigUrl: string) {
+  async getOidcConfig(oidcConfigUrl: string) {
     const response = await fetch(`${oidcConfigUrl}/sequence/.well-known/openid-configuration`)
     if (!response.ok) {
       throw new Error('Failed to fetch OIDC configuration')
@@ -21,7 +21,7 @@ export class ExternalAttachmentService {
     return response.json()
   }
 
-  private async getAccessToken(tokenUrl: string, clientId: string, clientSecret: string) {
+  async getAccessToken(tokenUrl: string, clientId: string, clientSecret: string) {
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -42,7 +42,7 @@ export class ExternalAttachmentService {
     return data.access_token
   }
 
-  private async fetchAttachment(attachmentUrl: string, accessToken: string) {
+  async fetchAttachment(attachmentUrl: string, accessToken: string) {
     try {
       const response = await fetch(attachmentUrl, {
         headers: {
