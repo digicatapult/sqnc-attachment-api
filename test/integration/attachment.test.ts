@@ -31,6 +31,7 @@ import {
   parametersAttachmentId2,
   additionalAttachmentSeed,
   parametersAttachmentId3,
+  nonExistentAttachmentId,
 } from '../seeds/attachment.seed.js'
 import supertest from 'supertest'
 
@@ -52,7 +53,7 @@ describe('attachment', () => {
   })
 
   afterEach(async () => {
-    // await cleanup()
+    await cleanup()
   })
 
   describe('invalid requests', () => {
@@ -115,6 +116,14 @@ describe('attachment', () => {
           integrityHash: 'hash2',
           owner: 'other',
           size: 42,
+        },
+        {
+          id: parametersAttachmentId3,
+          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
+          owner: 'other',
+          filename: null,
+          size: null,
+          createdAt: '2021-05-07T15:48:48.774Z',
         },
       ])
     })
@@ -182,6 +191,14 @@ describe('attachment', () => {
           owner: 'other',
           size: 42,
         },
+        {
+          id: parametersAttachmentId3,
+          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
+          owner: 'other',
+          filename: null,
+          size: null,
+          createdAt: '2021-05-07T15:48:48.774Z',
+        },
       ])
     })
 
@@ -196,6 +213,14 @@ describe('attachment', () => {
           integrityHash: 'hash2',
           owner: 'other',
           size: 42,
+        },
+        {
+          id: parametersAttachmentId3,
+          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
+          owner: 'other',
+          filename: null,
+          size: null,
+          createdAt: '2021-05-07T15:48:48.774Z',
         },
       ])
     })
@@ -446,7 +471,7 @@ describe('attachment', () => {
       })
     })
 
-    it('returns JSON attachment', async () => {
+    it.only('returns JSON attachment', async () => {
       const { id } = jsonRes.body
       const { status, body } = await get(app, `/v1/attachment/${id}`, { accept: 'application/json' })
 
@@ -493,6 +518,13 @@ describe('attachment', () => {
       const hash = response.body.integrityHash
 
       jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
+      console.log({
+        body: jsonRes.body,
+        isBuffer: jsonRes.body instanceof Buffer,
+        type: typeof jsonRes.body,
+        constructor: jsonRes.body?.constructor?.name,
+        isUint8Array: jsonRes.body instanceof Uint8Array,
+      })
     })
 
     it('should retrieve the file successfully', () => {
@@ -746,7 +778,7 @@ describe('attachment', () => {
     })
   })
 
-  describe.only('external attachment - we are not the owner of the attachment', () => {
+  describe('external attachment - we are not the owner of the attachment', () => {
     beforeEach(async () => await attachmentSeed())
     withIpfsMock(jsonData, context)
 
@@ -754,9 +786,61 @@ describe('attachment', () => {
       const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
         accept: 'application/json',
       })
-      console.log(body)
+
       expect(status).to.equal(200)
-      // expect(body).to.deep.contain(jsonData)
+      expect(body).to.be.an.instanceOf(Buffer)
+    })
+  })
+
+  describe('getById - internal attachment retrieval', () => {
+    beforeEach(async () => {
+      await attachmentSeed()
+    })
+    withIpfsMock(jsonData, context)
+
+    it('should retrieve internal attachment with null filename', async () => {
+      const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
+        accept: 'application/json',
+      })
+      expect(status).to.equal(200)
+      expect(body).to.be.an.instanceOf(Buffer)
+    })
+
+    it('should retrieve internal attachment with null filename as octet-stream', async () => {
+      const { status, body, header } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
+        accept: 'application/octet-stream',
+      })
+      expect(status).to.equal(200)
+      expect(body).to.be.an.instanceOf(Buffer)
+      expect(header).to.deep.contain({
+        'content-type': 'application/octet-stream',
+        'content-disposition': 'attachment; filename="external"',
+      })
+    })
+
+    it('should handle error when peer attachment retrieval fails', async () => {
+      withIpfsMockError(context)
+      const { status, body } = await get(app, `/v1/attachment/${nonExistentAttachmentId}`, {
+        accept: 'application/json',
+      })
+      expect(status).to.equal(404)
+      expect(body).to.equal('attachment not found')
+    })
+
+    it.skip('should update attachment metadata after successful retrieval', async () => {
+      const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
+        accept: 'application/json',
+      })
+      expect(status).to.equal(200)
+      expect(body).to.be.an.instanceOf(Buffer)
+
+      // Verify the attachment was updated in the database
+      const { status: listStatus, body: attachments } = await get(app, `/v1/attachment?id=${parametersAttachmentId3}`)
+      expect(listStatus).to.equal(200)
+      expect(attachments[0]).to.have.property('filename')
+      expect(attachments[0]).to.have.property('size')
+      expect(attachments[0].filename).to.not.equal(null)
+      expect(attachments[0].size).to.not.equal(null)
     })
   })
 })

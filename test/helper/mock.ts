@@ -42,9 +42,7 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
           path: `/api/v0/ls?arg=QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN`,
           method: 'POST',
         })
-        .reply(200, {
-          Objects: [{ Links: [{ Hash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN', Name: 'json' }] }],
-        })
+        .reply(200, fileContent)
       mockIpfs
         .intercept({
           path: '/api/v0/cat?arg=file_hash',
@@ -279,15 +277,7 @@ export const withAttachmentMock = (context: MockContext) => {
         path: '/v1/attachment/5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
         method: 'GET',
       })
-      .reply(200, {
-        id: '5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
-        integrity_hash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-        owner: '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
-        filename: 'json',
-        size: 11,
-        created_at: '2025-05-07T15:48:48.774Z',
-        updated_at: '2025-05-07T15:48:48.774Z',
-      })
+      .reply(200, { key: 'it', filename: 'JSON attachment it' })
       .persist()
   })
 

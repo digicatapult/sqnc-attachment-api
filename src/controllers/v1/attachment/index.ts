@@ -250,17 +250,19 @@ export class AttachmentController extends Controller {
 
     let { filename, size } = attachment
     if (blobBuffer == null) {
-      const self = await this.identity.getMemberBySelf()
-      if (attachment.owner !== self.address) {
-        throw new Forbidden()
-      }
+      if (isExternal) {
+        const self = await this.identity.getMemberBySelf()
+        if (attachment.owner !== self.address) {
+          throw new Forbidden()
+        }
 
-      const parseRes = externalJwtParser.safeParse(req.user.jwt)
-      if (!parseRes.success) {
-        throw new Forbidden()
+        const parseRes = externalJwtParser.safeParse(req.user.jwt)
+        if (!parseRes.success) {
+          throw new Forbidden()
+        }
+        // await to see if it fails
+        await this.authz.authorize(attachment.id, parseRes.data.organisation.chainAccount)
       }
-      // await to see if it fails
-      await this.authz.authorize(attachment.id, parseRes.data.organisation.chainAccount)
       const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
       blobBuffer = Buffer.from(await blob.arrayBuffer())
       if (size === null || filename === null) {
@@ -295,7 +297,7 @@ export class AttachmentController extends Controller {
     }
     return this.octetResponse(blobBuffer, filename || 'external') // what do we return here instead?
   }
-
+  // not used anymore keeping as reference for conditions
   private async findAttachmentRecord(idOrHash: AttachmentIdOrHash, user: TsoaExpressUser) {
     const isUUID = idOrHash.match(uuidRegex)
     const where = isUUID ? { id: idOrHash } : { integrity_hash: idOrHash }
