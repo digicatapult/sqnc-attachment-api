@@ -37,7 +37,7 @@ describe('ExternalAttachmentService', () => {
 
       const result = await service.getOidcConfig('https://example.com')
 
-      expect(fetchStub.calledWith('https://example.com/sequence/.well-known/openid-configuration')).to.be.true
+      expect(fetchStub.calledWith('https://example.com/sequence/.well-known/openid-configuration')).to.be.equal(true)
       expect(result).to.deep.equal(mockOidcConfig)
     })
 
@@ -96,7 +96,7 @@ describe('ExternalAttachmentService', () => {
             client_secret: 'test-client-secret',
           }),
         })
-      ).to.be.true
+      ).to.be.equal(true)
 
       expect(result).to.equal('mock-access-token')
     })
@@ -149,7 +149,7 @@ describe('ExternalAttachmentService', () => {
             Authorization: 'Bearer test-access-token',
           },
         })
-      ).to.be.true
+      ).to.be.equal(true)
 
       expect(result).to.be.instanceof(Buffer)
       expect(result).to.deep.equal(Buffer.from(mockAttachmentData))
@@ -167,7 +167,7 @@ describe('ExternalAttachmentService', () => {
       } catch (error) {
         expect(error).to.be.an('Error')
         expect(error.message).to.equal('Failed to fetch attachment')
-        expect(logStub.calledWith('Error fetching attachment: %s', 'Failed to fetch attachment')).to.be.true
+        expect(logStub.calledWith('Error fetching attachment: %s', 'Failed to fetch attachment')).to.be.equal(true)
       }
     })
 
@@ -180,7 +180,7 @@ describe('ExternalAttachmentService', () => {
         expect.fail('Expected an error to be thrown')
       } catch (error) {
         expect(error).to.equal(networkError)
-        expect(logStub.calledWith('Error fetching attachment: %s', 'Network error')).to.be.true
+        expect(logStub.calledWith('Error fetching attachment: %s', 'Network error')).to.be.equal(true)
       }
     })
   })
