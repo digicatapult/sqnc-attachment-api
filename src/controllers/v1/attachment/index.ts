@@ -17,7 +17,7 @@ import {
   Hidden,
 } from 'tsoa'
 import { Logger } from 'pino'
-import express, { response } from 'express'
+import express from 'express'
 import { Readable } from 'node:stream'
 
 import { logger } from '../../../lib/logger.js'
