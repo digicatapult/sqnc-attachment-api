@@ -286,8 +286,8 @@ export class AttachmentController extends Controller {
   ): Promise<{ buffer: Buffer<ArrayBuffer>; filename: string }> {
     // If the attachment is from another owner, get it from peer
     if (attachment.owner !== self.address) {
-      const buffer = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
-      return { buffer, filename: attachment.filename || 'external' }
+      const { blobBuffer, filename } = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
+      return { buffer: blobBuffer, filename: filename || 'external' }
     }
 
     // Get from IPFS

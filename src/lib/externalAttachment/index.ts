@@ -47,21 +47,25 @@ export class ExternalAttachmentService {
       const response = await fetch(attachmentUrl, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/octet-stream',
         },
       })
+      const headers = response.headers
+
+      const filename = headers.get('content-disposition')?.split('filename=')[1]?.replace(/['"]/g, '')
 
       if (!response.ok) {
         throw new Error('Failed to fetch attachment')
       }
       const blobBuffer = Buffer.from(await response.arrayBuffer())
-      return blobBuffer
+      return { blobBuffer, filename }
     } catch (err) {
       this.log.error('Error fetching attachment: %s', err instanceof Error ? err.message : 'unknown')
       throw err
     }
   }
 
-  public async getAttachmentFromPeer(attachment: AttachmentRow): Promise<Buffer<ArrayBuffer>> {
+  public async getAttachmentFromPeer(attachment: AttachmentRow) {
     const orgData = await this.identity.getOrganisationDataByAddress(attachment.owner)
     // preconfigure the oidc endpoints so I can connect to them
     const oidcConfig = await this.getOidcConfig(orgData.oidcConfigurationEndpointAddress)
@@ -71,11 +75,11 @@ export class ExternalAttachmentService {
       env.IDP_INTERNAL_CLIENT_SECRET
     )
 
-    const attachmentBlob = await this.fetchAttachment(
+    const { blobBuffer, filename } = await this.fetchAttachment(
       `${orgData.attachmentEndpointAddress}/attachment/${attachment.id}`,
       accessToken
     )
 
-    return attachmentBlob
+    return { blobBuffer, filename }
   }
 }
