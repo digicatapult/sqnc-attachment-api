@@ -139,6 +139,9 @@ describe('ExternalAttachmentService', () => {
       fetchStub.resolves({
         ok: true,
         arrayBuffer: () => Promise.resolve(mockAttachmentData.buffer),
+        headers: new Headers({
+          'content-disposition': 'attachment; filename="test.txt"',
+        }),
       })
 
       const result = await service.fetchAttachment('https://example.com/attachment/123', 'test-access-token')
@@ -147,18 +150,23 @@ describe('ExternalAttachmentService', () => {
         fetchStub.calledWith('https://example.com/attachment/123', {
           headers: {
             Authorization: 'Bearer test-access-token',
+            Accept: 'application/octet-stream',
           },
         })
       ).to.be.equal(true)
 
-      expect(result).to.be.instanceof(Buffer)
-      expect(result).to.deep.equal(Buffer.from(mockAttachmentData))
+      expect(result.blobBuffer).to.be.instanceof(Buffer)
+      expect(result.blobBuffer).to.deep.equal(Buffer.from(mockAttachmentData))
+      expect(result.filename).to.equal('test.txt')
     })
 
     it('should throw error and log when attachment fetch fails', async () => {
       fetchStub.resolves({
         ok: false,
         status: 404,
+        headers: new Headers({
+          'content-disposition': 'attachment; filename="test.txt"',
+        }),
       })
 
       try {
