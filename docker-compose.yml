@@ -30,7 +30,7 @@ services:
       - IDP_INTERNAL_CLIENT_SECRET=secret
 
   postgres-attachment-api:
-    image: postgres:17.4-alpine
+    image: postgres:17.5-alpine
     container_name: postgres-attachment-api
     ports:
       - 5432:5432
@@ -47,7 +47,7 @@ services:
       retries: 5
 
   postgres-identity-service:
-    image: postgres:17.4-alpine
+    image: postgres:17.5-alpine
     container_name: postgres-identity
     ports:
       - 5433:5432
@@ -64,7 +64,7 @@ services:
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.2.17
+    image: digicatapult/sqnc-identity-service:v4.2.22
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -111,7 +111,7 @@ services:
       - 5001:5001
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.2.3
+    image: quay.io/keycloak/keycloak:26.2.4
     container_name: keycloak
     environment:
       - KEYCLOAK_ADMIN=admin
