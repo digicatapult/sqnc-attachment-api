@@ -64,7 +64,7 @@ services:
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.2.25
+    image: digicatapult/sqnc-identity-service:v4.2.26
     container_name: identity-service
     depends_on:
       postgres-identity-service:
