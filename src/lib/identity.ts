@@ -13,6 +13,14 @@ const identityResponseValidator = z.object({
 })
 type IdentityResponse = z.infer<typeof identityResponseValidator>
 
+const orgDataValidator = z.object({
+  account: z.string(),
+  attachmentEndpointAddress: z.string(),
+  oidcConfigurationEndpointAddress: z.string(),
+})
+
+type OrgDataResponse = z.infer<typeof orgDataValidator>
+
 const identityHealthValidator = z.object({
   version: z.string(),
   status: z.literal('ok'),
@@ -101,4 +109,18 @@ export default class Identity {
   }
 
   getMemberByAddress = (alias: string) => this.getMemberByAlias(alias)
+
+  getOrganisationDataByAddress = async (address: string): Promise<OrgDataResponse> => {
+    const res = await fetch(`${this.URL_PREFIX}/v1/members/${address}/org-data`, {
+      headers: {
+        authorization: `bearer ${await this.auth.getInternalAccessToken()}`,
+      },
+    })
+
+    if (res.ok) {
+      return orgDataValidator.parse(await res.json())
+    }
+
+    throw new HttpResponse({})
+  }
 }

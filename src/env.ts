@@ -53,6 +53,13 @@ const env = envalid.cleanEnv(process.env, {
     default: '',
     devDefault: 'http://www.example.com/authz',
   }),
+  IDP_EXTERNAL_CREDENTIAL_SECRETS: envalid.str({
+    devDefault: 'alice:secret,bob:secret,charlie:secret',
+  }),
+  IDP_OWNERS: envalid.str({
+    devDefault:
+      '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty,5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y',
+  }),
 })
 
 export default env
