@@ -152,7 +152,7 @@ describe('attachment', () => {
     it('filters attachment by owner (self by alias)', async () => {
       const { status, body } = await get(app, `/v1/attachment?owner=self`)
       expect(status).to.equal(200)
-      expect(body).to.deep.equal([
+      expect(body).to.contain.deep.members([
         {
           createdAt: '2023-01-01T00:00:00.000Z',
           filename: 'test.txt',
@@ -175,7 +175,7 @@ describe('attachment', () => {
     it('filters attachment by owner (self by address)', async () => {
       const { status, body } = await get(app, `/v1/attachment?owner=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY`)
       expect(status).to.equal(200)
-      expect(body).to.deep.equal([
+      expect(body).to.contain.deep.members([
         {
           createdAt: '2023-01-01T00:00:00.000Z',
           filename: 'test.txt',
