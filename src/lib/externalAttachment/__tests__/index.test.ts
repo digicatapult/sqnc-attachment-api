@@ -35,9 +35,9 @@ describe('ExternalAttachmentService', () => {
         json: () => Promise.resolve(mockOidcConfig),
       })
 
-      const result = await service.getOidcConfig('https://example.com')
+      const result = await service.getOidcConfig('https://example.com/external/.well-known/openid-configuration')
 
-      expect(fetchStub.calledWith('https://example.com/sequence/.well-known/openid-configuration')).to.be.equal(true)
+      expect(fetchStub.calledWith('https://example.com/external/.well-known/openid-configuration')).to.be.equal(true)
       expect(result).to.deep.equal(mockOidcConfig)
     })
 

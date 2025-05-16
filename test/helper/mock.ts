@@ -35,11 +35,19 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
       .reply(200, {
         Objects: [{ Links: [{ Hash: 'file_hash', Name: 'json' }] }],
       })
+    mockIpfs
+      .intercept({
+        path: `/api/v0/ls?arg=QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN`,
+        method: 'POST',
+      })
+      .reply(200, {
+        Objects: [{ Links: [{ Hash: 'someHash', Name: 'json' }] }],
+      })
 
     if (fileContent) {
       mockIpfs
         .intercept({
-          path: `/api/v0/ls?arg=QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN`,
+          path: `/api/v0/cat?arg=someHash`,
           method: 'POST',
         })
         .reply(200, fileContent)

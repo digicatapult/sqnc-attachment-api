@@ -14,7 +14,7 @@ export class ExternalAttachmentService {
   }
 
   async getOidcConfig(oidcConfigUrl: string) {
-    const response = await fetch(`${oidcConfigUrl}/sequence/.well-known/openid-configuration`)
+    const response = await fetch(oidcConfigUrl)
     if (!response.ok) {
       throw new Error('Failed to fetch OIDC configuration')
     }
@@ -55,6 +55,8 @@ export class ExternalAttachmentService {
       const filename = headers.get('content-disposition')?.split('filename=')[1]?.replace(/['"]/g, '')
 
       if (!response.ok) {
+        console.log('response', response.body)
+        console.log('status', response.status)
         throw new Error('Failed to fetch attachment')
       }
       const blobBuffer = Buffer.from(await response.arrayBuffer())
@@ -69,11 +71,8 @@ export class ExternalAttachmentService {
     const orgData = await this.identity.getOrganisationDataByAddress(attachment.owner)
     // preconfigure the oidc endpoints so I can connect to them
     const oidcConfig = await this.getOidcConfig(orgData.oidcConfigurationEndpointAddress)
-    const accessToken = await this.getAccessToken(
-      oidcConfig.token_endpoint,
-      env.IDP_INTERNAL_CLIENT_ID,
-      env.IDP_INTERNAL_CLIENT_SECRET
-    )
+    const creds = await this.getExternalCredentials(attachment.owner)
+    const accessToken = await this.getAccessToken(oidcConfig.token_endpoint, creds.clientId, creds.clientSecret)
 
     const { blobBuffer, filename } = await this.fetchAttachment(
       `${orgData.attachmentEndpointAddress}/attachment/${attachment.id}`,
@@ -81,5 +80,15 @@ export class ExternalAttachmentService {
     )
 
     return { blobBuffer, filename }
+  }
+  async getExternalCredentials(ownerId: string) {
+    const ownersArray = env.IDP_OWNERS.split(',')
+    const secretsArray = env.IDP_EXTERNAL_CREDENTIAL_SECRETS.split(',')
+    const index = ownersArray.indexOf(ownerId)
+    if (index === -1) {
+      throw new Error(`No external credentials found for ownerId: ${ownerId}`)
+    }
+    const [clientId, clientSecret] = secretsArray[index].split(':')
+    return { clientId, clientSecret }
   }
 }

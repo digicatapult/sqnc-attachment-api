@@ -52,7 +52,9 @@ services:
       - IDP_EXTERNAL_REALM=external
       - IDP_INTERNAL_CLIENT_ID=sequence
       - IDP_INTERNAL_CLIENT_SECRET=secret
+      - IDP_EXTERNAL_CREDENTIAL_SECRETS=alice:secret,bob:secret,charlie:secret
       - LOG_LEVEL=debug
+      - IDP_OWNERS=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty,5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y
   postgres-attachment-api-b:
     image: postgres:17.4-alpine
     container_name: postgres-attachment-api-b
@@ -71,7 +73,7 @@ services:
       retries: 5
 
   sqnc-identity-service-b:
-    image: digicatapult/sqnc-identity-service:v4.2.19
+    image: digicatapult/sqnc-identity-service:v4.2.25
     container_name: identity-service-b
     depends_on:
       postgres-identity-service-b:
@@ -123,7 +125,7 @@ services:
       - 8080:8080
       - 5001:5001
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.2.19
+    image: digicatapult/sqnc-identity-service:v4.2.25
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -163,7 +165,7 @@ services:
       timeout: 5s
       retries: 5
   sqnc-node:
-    image: digicatapult/sqnc-node:v12.5.0
+    image: digicatapult/sqnc-node:v12.5.1
     container_name: node
     command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
     ports:
@@ -172,7 +174,7 @@ services:
       - 9933:9933
     restart: on-failure
   sqnc-node-b:
-    image: digicatapult/sqnc-node:v12.5.0
+    image: digicatapult/sqnc-node:v12.5.1
     container_name: node-b
     command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
     ports:

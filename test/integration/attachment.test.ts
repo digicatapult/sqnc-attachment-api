@@ -30,8 +30,8 @@ import {
   attachmentSeed,
   parametersAttachmentId2,
   additionalAttachmentSeed,
-  parametersAttachmentId3,
   nonExistentAttachmentId,
+  parametersAttachmentId4,
 } from '../seeds/attachment.seed.js'
 import supertest from 'supertest'
 
@@ -118,9 +118,9 @@ describe('attachment', () => {
           size: 42,
         },
         {
-          id: parametersAttachmentId3,
+          id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'other',
+          owner: 'self',
           filename: null,
           size: null,
           createdAt: '2021-05-07T15:48:48.774Z',
@@ -161,6 +161,14 @@ describe('attachment', () => {
           owner: 'self',
           size: 42,
         },
+        {
+          id: parametersAttachmentId4,
+          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
+          owner: 'self',
+          filename: null,
+          size: null,
+          createdAt: '2021-05-07T15:48:48.774Z',
+        },
       ])
     })
 
@@ -175,6 +183,14 @@ describe('attachment', () => {
           integrityHash: 'hash1',
           owner: 'self',
           size: 42,
+        },
+        {
+          id: parametersAttachmentId4,
+          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
+          owner: 'self',
+          filename: null,
+          size: null,
+          createdAt: '2021-05-07T15:48:48.774Z',
         },
       ])
     })
@@ -191,14 +207,6 @@ describe('attachment', () => {
           owner: 'other',
           size: 42,
         },
-        {
-          id: parametersAttachmentId3,
-          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'other',
-          filename: null,
-          size: null,
-          createdAt: '2021-05-07T15:48:48.774Z',
-        },
       ])
     })
 
@@ -213,14 +221,6 @@ describe('attachment', () => {
           integrityHash: 'hash2',
           owner: 'other',
           size: 42,
-        },
-        {
-          id: parametersAttachmentId3,
-          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'other',
-          filename: null,
-          size: null,
-          createdAt: '2021-05-07T15:48:48.774Z',
         },
       ])
     })
@@ -626,9 +626,9 @@ describe('attachment', () => {
         {
           createdAt: '2021-05-07T15:48:48.774Z',
           filename: null,
-          id: '5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
+          id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'other',
+          owner: 'self',
           size: null,
         },
       ])
@@ -670,9 +670,9 @@ describe('attachment', () => {
         {
           createdAt: '2021-05-07T15:48:48.774Z',
           filename: null,
-          id: '5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
+          id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'other',
+          owner: 'self',
           size: null,
         },
       ])
@@ -714,9 +714,9 @@ describe('attachment', () => {
         {
           createdAt: '2021-05-07T15:48:48.774Z',
           filename: null,
-          id: '5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
+          id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'other',
+          owner: 'self',
           size: null,
         },
       ])
@@ -758,9 +758,9 @@ describe('attachment', () => {
         {
           createdAt: '2021-05-07T15:48:48.774Z',
           filename: null,
-          id: '5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
+          id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'other',
+          owner: 'self',
           size: null,
         },
       ])
@@ -804,12 +804,13 @@ describe('attachment', () => {
     })
   })
 
-  describe('external attachment - we are not the owner of the attachment', () => {
+  describe('external attachment - we are not the owner of the attachment and try to retrieve from peer', () => {
     beforeEach(async () => await attachmentSeed())
-    withIpfsMock(jsonData, context)
+    withIpfsMock(blobData, context)
+    withAuthzMock(context, 200, { result: { allow: true } })
 
     it('returns JSON attachment', async () => {
-      const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
+      const { status, body } = await getExternal(app, `/v1/attachment/${parametersAttachmentId4}`, {
         accept: 'application/json',
       })
 
@@ -818,29 +819,30 @@ describe('attachment', () => {
     })
   })
 
-  describe('getById - internal attachment retrieval', () => {
+  describe('getById - external attachment retrieval', () => {
     beforeEach(async () => {
       await attachmentSeed()
     })
-    withIpfsMock(jsonData, context)
+    withIpfsMock(blobData, context)
+    withAuthzMock(context, 200, { result: { allow: true } })
 
     it('should retrieve internal attachment with null filename', async () => {
-      const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
+      const { status, body } = await getExternal(app, `/v1/attachment/${parametersAttachmentId4}`, {
         accept: 'application/json',
       })
       expect(status).to.equal(200)
       expect(body).to.be.an.instanceOf(Buffer)
     })
 
-    it('should retrieve internal attachment with null filename as octet-stream', async () => {
-      const { status, body, header } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
+    it('should retrieve external attachment with null filename as octet-stream', async () => {
+      const { status, body, header } = await get(app, `/v1/attachment/${parametersAttachmentId4}`, {
         accept: 'application/octet-stream',
       })
       expect(status).to.equal(200)
       expect(body).to.be.an.instanceOf(Buffer)
       expect(header).to.deep.contain({
         'content-type': 'application/octet-stream',
-        'content-disposition': 'attachment; filename="external"',
+        'content-disposition': 'attachment; filename="json"',
       })
     })
 
@@ -855,14 +857,14 @@ describe('attachment', () => {
 
     // TODO: this test is failing because the external attachment is not updated in the database ... is meant to be ?
     it.skip('should update attachment metadata after successful retrieval', async () => {
-      const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId3}`, {
+      const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId4}`, {
         accept: 'application/json',
       })
       expect(status).to.equal(200)
       expect(body).to.be.an.instanceOf(Buffer)
 
       // Verify the attachment was updated in the database
-      const { status: listStatus, body: attachments } = await get(app, `/v1/attachment?id=${parametersAttachmentId3}`)
+      const { status: listStatus, body: attachments } = await get(app, `/v1/attachment?id=${parametersAttachmentId4}`)
       expect(listStatus).to.equal(200)
       expect(attachments[0]).to.have.property('filename')
       expect(attachments[0]).to.have.property('size')
