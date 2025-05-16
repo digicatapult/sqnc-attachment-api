@@ -55,8 +55,6 @@ export class ExternalAttachmentService {
       const filename = headers.get('content-disposition')?.split('filename=')[1]?.replace(/['"]/g, '')
 
       if (!response.ok) {
-        console.log('response', response.body)
-        console.log('status', response.status)
         throw new Error('Failed to fetch attachment')
       }
       const blobBuffer = Buffer.from(await response.arrayBuffer())
