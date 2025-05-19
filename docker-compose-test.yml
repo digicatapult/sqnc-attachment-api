@@ -25,6 +25,13 @@ services:
 
   # -------------------------------------------------------------------- extra attachment svcs
 
+  mock-authz-b:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./docker/authzMock
+    environment:
+      - ALLOW=true
+
   attachment-api-b:
     build:
       dockerfile: ./Dockerfile
@@ -52,9 +59,10 @@ services:
       - IDP_EXTERNAL_REALM=external
       - IDP_INTERNAL_CLIENT_ID=sequence
       - IDP_INTERNAL_CLIENT_SECRET=secret
-      - IDP_EXTERNAL_CREDENTIAL_SECRETS=alice:secret,bob:secret,charlie:secret
+      - IDP_EXTERNAL_CREDENTIAL_SECRETS=bob:secret,bob:secret,bob:secret
       - LOG_LEVEL=debug
       - IDP_OWNERS=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty,5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y
+      - AUTHZ_WEBHOOK=http://mock-authz-b:3000
   postgres-attachment-api-b:
     image: postgres:17.4-alpine
     container_name: postgres-attachment-api-b
@@ -67,7 +75,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=sqnc-attachment-api
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -108,7 +116,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=sqnc-identity-service
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -160,7 +168,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=sqnc-identity-service
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
       interval: 10s
       timeout: 5s
       retries: 5

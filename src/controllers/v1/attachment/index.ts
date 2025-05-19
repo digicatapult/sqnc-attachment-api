@@ -252,9 +252,12 @@ export class AttachmentController extends Controller {
   private async findAttachmentRecord(idOrHash: AttachmentIdOrHash, user: TsoaExpressUser) {
     const isUUID = idOrHash.match(uuidRegex)
     const where = isUUID ? { id: idOrHash } : { integrity_hash: idOrHash }
+
+    this.log.debug('Finding attachment where %j', where)
     const [attachment] = await this.db.get('attachment', where)
 
     const isExternal = user.securityName === 'external'
+    this.log.debug('External check security: %s, attachment: %j', user.securityName, where)
     if (!attachment && isExternal) {
       throw new Forbidden()
     }
@@ -268,11 +271,13 @@ export class AttachmentController extends Controller {
 
     const self = await this.identity.getMemberBySelf()
     if (attachment.owner !== self.address) {
+      this.log.debug('Attachment not owned by this instance. Expected %s got %s', self.address, attachment.owner)
       throw new Forbidden()
     }
 
     const parseRes = externalJwtParser.safeParse(user.jwt)
     if (!parseRes.success) {
+      this.log.debug('Failed to parse jwt object. Got %j', user.jwt)
       throw new Forbidden()
     }
 

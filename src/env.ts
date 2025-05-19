@@ -54,7 +54,7 @@ const env = envalid.cleanEnv(process.env, {
     devDefault: 'http://www.example.com/authz',
   }),
   IDP_EXTERNAL_CREDENTIAL_SECRETS: envalid.str({
-    devDefault: 'alice:secret,bob:secret,charlie:secret',
+    devDefault: 'alice:secret,alice:secret,alice:secret',
   }),
   IDP_OWNERS: envalid.str({
     devDefault:

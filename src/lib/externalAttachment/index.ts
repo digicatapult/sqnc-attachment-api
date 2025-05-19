@@ -73,7 +73,7 @@ export class ExternalAttachmentService {
     const accessToken = await this.getAccessToken(oidcConfig.token_endpoint, creds.clientId, creds.clientSecret)
 
     const { blobBuffer, filename } = await this.fetchAttachment(
-      `${orgData.attachmentEndpointAddress}/attachment/${attachment.id}`,
+      `${orgData.attachmentEndpointAddress}/attachment/${attachment.integrity_hash}`,
       accessToken
     )
 
