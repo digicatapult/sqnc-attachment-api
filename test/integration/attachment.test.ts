@@ -829,6 +829,7 @@ describe('attachment', () => {
         accept: 'application/json',
       })
       expect(status).to.equal(200)
+      expect(body).to.contain({ key: 'it', filename: 'JSON attachment it' })
 
       // Verify the attachment was updated in the database
       const { status: listStatus, body: attachments } = await get(app, `/v1/attachment?id=${parametersAttachmentId4}`)
