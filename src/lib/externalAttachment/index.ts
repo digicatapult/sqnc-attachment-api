@@ -6,6 +6,8 @@ import env from '../../env.js'
 import { AttachmentRow } from '../db/types.js'
 import { z } from 'zod'
 import contentDisposition from 'content-disposition'
+import * as fs from 'fs'
+import * as path from 'path'
 
 const OidcConfigSchema = z.object({
   token_endpoint: z.string().url(),
@@ -16,6 +18,18 @@ const AccessTokenResponseSchema = z.object({
 })
 
 type OidcConfig = z.infer<typeof OidcConfigSchema>
+
+interface Credential {
+  username: string
+  secret: string
+  owner: string
+}
+
+function loadCredentials(): Credential[] {
+  const credentialsPath = path.resolve(process.cwd(), env.CREDENTIALS_FILE_PATH)
+  const rawData = fs.readFileSync(credentialsPath, 'utf-8')
+  return JSON.parse(rawData)
+}
 
 @singleton()
 export class ExternalAttachmentService {
@@ -95,13 +109,16 @@ export class ExternalAttachmentService {
     return { blobBuffer, filename }
   }
   async getExternalCredentials(ownerId: string) {
-    const ownersArray = env.IDP_OWNERS.split(',')
-    const secretsArray = env.IDP_EXTERNAL_CREDENTIAL_SECRETS.split(',')
-    const index = ownersArray.indexOf(ownerId)
-    if (index === -1) {
+    const credentialsData = loadCredentials()
+    const credential = credentialsData.credentials.find((c) => c.owner === ownerId)
+
+    if (!credential) {
       throw new Error(`No external credentials found for ownerId: ${ownerId}`)
     }
-    const [clientId, clientSecret] = secretsArray[index].split(':')
-    return { clientId, clientSecret }
+
+    return {
+      clientId: credential.username,
+      clientSecret: credential.secret,
+    }
   }
 }

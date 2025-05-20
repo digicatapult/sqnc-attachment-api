@@ -53,12 +53,9 @@ const env = envalid.cleanEnv(process.env, {
     default: '',
     devDefault: 'http://www.example.com/authz',
   }),
-  IDP_EXTERNAL_CREDENTIAL_SECRETS: envalid.str({
-    devDefault: 'alice:secret,alice:secret,alice:secret',
-  }),
-  IDP_OWNERS: envalid.str({
-    devDefault:
-      '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty,5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y',
+  CREDENTIALS_FILE_PATH: envalid.str({
+    default: 'docker/config/credentials.json',
+    devDefault: 'docker/config/credentials.json',
   }),
 })
 
