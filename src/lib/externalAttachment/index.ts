@@ -110,7 +110,7 @@ export class ExternalAttachmentService {
   }
   async getExternalCredentials(ownerId: string) {
     const credentialsData = loadCredentials()
-    const credential = credentialsData.credentials.find((c) => c.owner === ownerId)
+    const credential = credentialsData.find((c) => c.owner === ownerId)
 
     if (!credential) {
       throw new Error(`No external credentials found for ownerId: ${ownerId}`)
