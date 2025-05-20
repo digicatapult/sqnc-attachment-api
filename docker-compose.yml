@@ -95,6 +95,8 @@ services:
       postgres-attachment-api-b:
         condition: service_healthy
     command: /bin/sh -c "npx knex --env production migrate:latest && npm start"
+    volumes:
+      - ./docker/config/credentials.json:/app/docker/config/credentials.json
     environment:
       - LOG_LEVEL=debug
       - DB_HOST=postgres-attachment-api-b
@@ -112,8 +114,7 @@ services:
       - IDP_EXTERNAL_REALM=external
       - IDP_INTERNAL_CLIENT_ID=sequence
       - IDP_INTERNAL_CLIENT_SECRET=secret
-      - IDP_EXTERNAL_CREDENTIAL_SECRETS=bob:secret,bob:secret,bob:secret
-      - IDP_OWNERS=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY,5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty,5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y
+      - CREDENTIALS_FILE_PATH=/app/docker/config/credentials.json
       - AUTHZ_WEBHOOK=http://mock-authz-b:3000
   postgres-attachment-api-b:
     image: postgres:17.4-alpine
