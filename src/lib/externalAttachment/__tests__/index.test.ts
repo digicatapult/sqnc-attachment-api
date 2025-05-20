@@ -27,7 +27,6 @@ describe('ExternalAttachmentService', () => {
     it('should successfully fetch OIDC configuration', async () => {
       const mockOidcConfig = {
         token_endpoint: 'https://example.com/token',
-        authorization_endpoint: 'https://example.com/auth',
       }
 
       fetchStub.resolves({
