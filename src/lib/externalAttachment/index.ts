@@ -28,7 +28,8 @@ interface Credential {
 function loadCredentials(): Credential[] {
   const credentialsPath = path.resolve(process.cwd(), env.CREDENTIALS_FILE_PATH)
   const rawData = fs.readFileSync(credentialsPath, 'utf-8')
-  return JSON.parse(rawData)
+  const parsed = JSON.parse(rawData)
+  return parsed.credentials
 }
 
 @singleton()
@@ -110,12 +111,14 @@ export class ExternalAttachmentService {
   }
   async getExternalCredentials(ownerId: string) {
     const credentialsData = loadCredentials()
-    const credential = credentialsData.find((c) => c.owner === ownerId)
+    const credentials = credentialsData.filter((c) => c.owner === ownerId)
 
-    if (!credential) {
+    if (credentials.length === 0) {
       throw new Error(`No external credentials found for ownerId: ${ownerId}`)
     }
 
+    // Take the first credential if multiple exist
+    const credential = credentials[0]
     return {
       clientId: credential.username,
       clientSecret: credential.secret,
