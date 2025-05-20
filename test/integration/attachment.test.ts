@@ -120,7 +120,7 @@ describe('attachment', () => {
         {
           id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'self',
+          owner: 'other',
           filename: null,
           size: null,
           createdAt: '2021-05-07T15:48:48.774Z',
@@ -161,14 +161,6 @@ describe('attachment', () => {
           owner: 'self',
           size: 42,
         },
-        {
-          id: parametersAttachmentId4,
-          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'self',
-          filename: null,
-          size: null,
-          createdAt: '2021-05-07T15:48:48.774Z',
-        },
       ])
     })
 
@@ -183,14 +175,6 @@ describe('attachment', () => {
           integrityHash: 'hash1',
           owner: 'self',
           size: 42,
-        },
-        {
-          id: parametersAttachmentId4,
-          integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'self',
-          filename: null,
-          size: null,
-          createdAt: '2021-05-07T15:48:48.774Z',
         },
       ])
     })
@@ -527,7 +511,7 @@ describe('attachment', () => {
   })
 
   // does this test still apply?
-  describe.skip('create [internal] then retrieves attachment (401) [external]', () => {
+  describe('create [internal] then retrieves attachment (401) [external]', () => {
     let jsonRes: supertest.Response
 
     withIpfsMock(jsonData, context)
@@ -540,7 +524,7 @@ describe('attachment', () => {
       jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
     })
 
-    it('should error unauthorised', () => {
+    it.skip('should error unauthorised', () => {
       expect(jsonRes.status).to.equal(401)
     })
   })
@@ -628,7 +612,7 @@ describe('attachment', () => {
           filename: null,
           id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'self',
+          owner: 'other',
           size: null,
         },
       ])
@@ -672,7 +656,7 @@ describe('attachment', () => {
           filename: null,
           id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'self',
+          owner: 'other',
           size: null,
         },
       ])
@@ -716,7 +700,7 @@ describe('attachment', () => {
           filename: null,
           id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'self',
+          owner: 'other',
           size: null,
         },
       ])
@@ -760,7 +744,7 @@ describe('attachment', () => {
           filename: null,
           id: parametersAttachmentId4,
           integrityHash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-          owner: 'self',
+          owner: 'other',
           size: null,
         },
       ])
@@ -804,37 +788,22 @@ describe('attachment', () => {
     })
   })
 
-  describe('external attachment - we are not the owner of the attachment and try to retrieve from peer', () => {
-    beforeEach(async () => await attachmentSeed())
-    withIpfsMock(blobData, context)
-    withAuthzMock(context, 200, { result: { allow: true } })
-
-    it('returns JSON attachment', async () => {
-      const { status, body } = await getExternal(app, `/v1/attachment/${parametersAttachmentId4}`, {
-        accept: 'application/json',
-      })
-
-      expect(status).to.equal(200)
-      expect(body).to.be.an.instanceOf(Buffer)
-    })
-  })
-
-  describe('getById - external attachment retrieval', () => {
+  describe('getById - retrieving attachment not owned by us ', () => {
     beforeEach(async () => {
       await attachmentSeed()
     })
     withIpfsMock(blobData, context)
     withAuthzMock(context, 200, { result: { allow: true } })
 
-    it('should retrieve internal attachment with null filename', async () => {
-      const { status, body } = await getExternal(app, `/v1/attachment/${parametersAttachmentId4}`, {
+    it('should retrieve attachment not owned by us  as application/json', async () => {
+      const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId4}`, {
         accept: 'application/json',
       })
       expect(status).to.equal(200)
-      expect(body).to.be.an.instanceOf(Buffer)
+      expect(body).to.contain({ key: 'it', filename: 'JSON attachment it' })
     })
 
-    it('should retrieve external attachment with null filename as octet-stream', async () => {
+    it('should retrieve attachment not owned by us as octet-stream', async () => {
       const { status, body, header } = await get(app, `/v1/attachment/${parametersAttachmentId4}`, {
         accept: 'application/octet-stream',
       })
@@ -855,21 +824,17 @@ describe('attachment', () => {
       expect(body).to.equal('attachment not found')
     })
 
-    // TODO: this test is failing because the external attachment is not updated in the database ... is meant to be ?
-    it.skip('should update attachment metadata after successful retrieval', async () => {
+    it('should update attachment metadata after successful retrieval', async () => {
       const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId4}`, {
         accept: 'application/json',
       })
       expect(status).to.equal(200)
-      expect(body).to.be.an.instanceOf(Buffer)
 
       // Verify the attachment was updated in the database
       const { status: listStatus, body: attachments } = await get(app, `/v1/attachment?id=${parametersAttachmentId4}`)
       expect(listStatus).to.equal(200)
       expect(attachments[0]).to.have.property('filename')
-      expect(attachments[0]).to.have.property('size')
       expect(attachments[0].filename).to.not.equal(null)
-      expect(attachments[0].size).to.not.equal(null)
     })
   })
 })

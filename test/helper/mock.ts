@@ -168,7 +168,7 @@ export const withIdentityMock = (context: MockContext) => {
       .reply(200, {
         account: bobAddress,
         attachmentEndpointAddress: 'http://localhost:3004/v1',
-        oidcConfigurationEndpointAddress: 'http://localhost:3080/realms',
+        oidcConfigurationEndpointAddress: 'http://localhost:3080/realms/external/.well-known/openid-configuration',
       })
       .persist()
   })
@@ -282,10 +282,18 @@ export const withAttachmentMock = (context: MockContext) => {
 
     mockAttachment
       .intercept({
-        path: '/v1/attachment/5b7d7ee7-5c86-4de0-a1de-9470b7223d91',
+        path: '/v1/attachment/QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
         method: 'GET',
       })
-      .reply(200, { key: 'it', filename: 'JSON attachment it' })
+      .reply(
+        200,
+        { key: 'it', filename: 'JSON attachment it' },
+        {
+          headers: {
+            'Content-Disposition': 'attachment; filename="json"',
+          },
+        }
+      )
       .persist()
   })
 

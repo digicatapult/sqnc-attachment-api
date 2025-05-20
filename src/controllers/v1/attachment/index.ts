@@ -292,6 +292,20 @@ export class AttachmentController extends Controller {
     // If the attachment is from another owner, get it from peer
     if (attachment.owner !== self.address) {
       const { blobBuffer, filename } = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
+      if (attachment.filename === null && filename) {
+        try {
+          await this.db.update(
+            'attachment',
+            { id: attachment.id },
+            {
+              filename: filename,
+            }
+          )
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'unknown'
+          this.log.warn('Error updating attachment filename: %s', message)
+        }
+      }
       return { buffer: blobBuffer, filename: filename || 'external' }
     }
 

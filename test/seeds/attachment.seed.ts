@@ -1,6 +1,6 @@
 import { container } from 'tsyringe'
 import Database from '../../src/lib/db/index.js'
-import { notSelfAddress, selfAddress } from '../helper/mock.js'
+import { bobAddress, notSelfAddress, selfAddress } from '../helper/mock.js'
 
 export const parametersAttachmentId = 'a789ad47-91c3-446e-90f9-a7c9b233eaf8'
 export const parametersAttachmentId2 = 'a789ad47-91c3-446e-90f9-a7c9b233eaff'
@@ -41,7 +41,7 @@ export const attachmentSeed = async () => {
   await db.insert('attachment', {
     id: parametersAttachmentId4,
     integrity_hash: 'QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN',
-    owner: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
+    owner: bobAddress,
     filename: null,
     size: null,
     created_at: new Date('2021-05-07T15:48:48.774Z'),

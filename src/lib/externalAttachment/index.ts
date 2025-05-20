@@ -4,6 +4,18 @@ import { logger } from '../logger.js'
 import Identity from '../identity.js'
 import env from '../../env.js'
 import { AttachmentRow } from '../db/types.js'
+import { z } from 'zod'
+import contentDisposition from 'content-disposition'
+
+const OidcConfigSchema = z.object({
+  token_endpoint: z.string().url(),
+})
+
+const AccessTokenResponseSchema = z.object({
+  access_token: z.string(),
+})
+
+type OidcConfig = z.infer<typeof OidcConfigSchema>
 
 @singleton()
 export class ExternalAttachmentService {
@@ -13,15 +25,16 @@ export class ExternalAttachmentService {
     this.log = logger.child({ service: 'ExternalAttachment' })
   }
 
-  async getOidcConfig(oidcConfigUrl: string) {
+  async getOidcConfig(oidcConfigUrl: string): Promise<OidcConfig> {
     const response = await fetch(oidcConfigUrl)
     if (!response.ok) {
       throw new Error('Failed to fetch OIDC configuration')
     }
-    return response.json()
+    const data = await response.json()
+    return OidcConfigSchema.parse(data)
   }
 
-  async getAccessToken(tokenUrl: string, clientId: string, clientSecret: string) {
+  async getAccessToken(tokenUrl: string, clientId: string, clientSecret: string): Promise<string> {
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -39,7 +52,8 @@ export class ExternalAttachmentService {
     }
 
     const data = await response.json()
-    return data.access_token
+    const validatedData = AccessTokenResponseSchema.parse(data)
+    return validatedData.access_token
   }
 
   async fetchAttachment(attachmentUrl: string, accessToken: string) {
@@ -51,8 +65,9 @@ export class ExternalAttachmentService {
         },
       })
       const headers = response.headers
-
-      const filename = headers.get('content-disposition')?.split('filename=')[1]?.replace(/['"]/g, '')
+      const contentDispositionHeader = headers.get('content-disposition')
+      const parsedDisposition = contentDispositionHeader ? contentDisposition.parse(contentDispositionHeader) : null
+      const filename = parsedDisposition?.parameters.filename
 
       if (!response.ok) {
         throw new Error('Failed to fetch attachment')
