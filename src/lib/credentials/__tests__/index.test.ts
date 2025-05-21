@@ -3,13 +3,12 @@ import { container } from 'tsyringe'
 import { Credentials } from '../index.js'
 import { expect } from 'chai'
 import sinon from 'sinon'
-import * as path from 'path'
 
 describe('Credentials', () => {
   let service: Credentials
 
   beforeEach(() => {
-    service = container.resolve(Credentials)
+    service = new Credentials() // make sure we are using a new instance each time as we only load credentials once
   })
 
   describe('with real credentials file', () => {
@@ -47,7 +46,7 @@ describe('Credentials', () => {
       readCredentialsFileStub.restore()
     })
 
-    it('should successfully retrieve credentials from mock file', async () => {
+    it('should load credentials into map and retrieve them', async () => {
       const mockCredentials = {
         credentials: [
           {
@@ -55,19 +54,33 @@ describe('Credentials', () => {
             secret: 'test-secret',
             owner: 'test-owner',
           },
+          {
+            username: 'another-client',
+            secret: 'another-secret',
+            owner: 'another-owner',
+          },
         ],
       }
 
       getCredentialsPathStub.returns('/mock/path/to/credentials.json')
       readCredentialsFileStub.returns(JSON.stringify(mockCredentials))
 
-      const result = await service.getCredentialsForOwner('test-owner')
-
-      expect(result).to.deep.equal({
+      // First call should load the file and populate the map
+      const result1 = await service.getCredentialsForOwner('test-owner')
+      expect(result1).to.deep.equal({
         clientId: 'test-client',
         clientSecret: 'test-secret',
       })
-      expect(getCredentialsPathStub.called).to.be.true
+
+      // Second call should use the map without reading the file again
+      const result2 = await service.getCredentialsForOwner('another-owner')
+      expect(result2).to.deep.equal({
+        clientId: 'another-client',
+        clientSecret: 'another-secret',
+      })
+
+      // Verify file was only read once
+      expect(readCredentialsFileStub.calledOnce).to.be.true
       expect(readCredentialsFileStub.calledWith('/mock/path/to/credentials.json')).to.be.true
     })
 
@@ -84,19 +97,26 @@ describe('Credentials', () => {
       }
     })
 
-    it('should throw error when test-config.json has invalid format', async () => {
-      const testConfigPath = path.resolve(process.cwd(), 'docker/config/test-config.json')
-      getCredentialsPathStub.returns(testConfigPath)
-      readCredentialsFileStub.returns('{}') // Empty JSON object
+    it('should throw error when credential is missing required fields', async () => {
+      const invalidCredentials = {
+        credentials: [
+          {
+            username: 'test-client',
+            // missing secret
+            owner: 'test-owner',
+          },
+        ],
+      }
+
+      getCredentialsPathStub.returns('/mock/path/to/credentials.json')
+      readCredentialsFileStub.returns(JSON.stringify(invalidCredentials))
 
       try {
         await service.getCredentialsForOwner('test-owner')
         expect.fail('Expected an error to be thrown')
       } catch (error) {
         expect(error).to.be.an('Error')
-        expect(error.message).to.equal(
-          'Failed to parse credentials file: Invalid credentials file format. Expected { credentials: [] }'
-        )
+        expect(error.message).to.contain('Invalid credentials file format:')
       }
     })
   })

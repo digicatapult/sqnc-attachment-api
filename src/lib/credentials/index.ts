@@ -4,33 +4,44 @@ import env, { Env } from '../../env.js'
 import { singleton } from 'tsyringe'
 import { logger } from '../logger.js'
 import { Logger } from 'pino'
+import { z } from 'zod'
 
-export interface Credential {
-  username: string
-  secret: string
-  owner: string
-}
+const CredentialSchema = z.object({
+  username: z.string(),
+  secret: z.string(),
+  owner: z.string(),
+})
+
+const CredentialsFileSchema = z.object({
+  credentials: z.array(CredentialSchema),
+})
+
+type Credential = z.infer<typeof CredentialSchema>
 
 @singleton()
 export class Credentials {
   private log: Logger
   private env: Env
+  private credentialsMap: Map<string, Credential>
 
   constructor() {
     this.log = logger.child({ module: 'Credentials' })
     this.env = env
+    this.credentialsMap = new Map()
   }
 
   async getCredentialsForOwner(ownerId: string): Promise<{ clientId: string; clientSecret: string }> {
-    const credentialsData = this.loadCredentials()
-    const credentials = credentialsData.filter((c) => c.owner === ownerId)
-
-    if (credentials.length === 0) {
+    if (this.credentialsMap.size === 0) {
+      const credentialsData = this.loadCredentials()
+      // Store all credentials in the map
+      credentialsData.forEach((cred) => {
+        this.credentialsMap.set(cred.owner, cred)
+      })
+    }
+    const credential = this.credentialsMap.get(ownerId)
+    if (!credential) {
       throw new Error(`No external credentials found for ownerId: ${ownerId}`)
     }
-
-    // Take the first credential if multiple exist
-    const credential = credentials[0]
     return {
       clientId: credential.username,
       clientSecret: credential.secret,
@@ -46,12 +57,13 @@ export class Credentials {
 
     try {
       const parsed = JSON.parse(rawData)
-      if (!parsed.credentials || !Array.isArray(parsed.credentials)) {
-        throw new Error('Invalid credentials file format. Expected { credentials: [] }')
-      }
-      this.log.info('Successfully loaded %d credentials', parsed.credentials.length)
-      return parsed.credentials
+      const validated = CredentialsFileSchema.parse(parsed)
+      this.log.info('Successfully loaded %d credentials', validated.credentials.length)
+      return validated.credentials
     } catch (parseError) {
+      if (parseError instanceof z.ZodError) {
+        throw new Error(`Invalid credentials file format: ${parseError.message}`)
+      }
       throw new Error(
         `Failed to parse credentials file: ${parseError instanceof Error ? parseError.message : 'unknown error'}`
       )
