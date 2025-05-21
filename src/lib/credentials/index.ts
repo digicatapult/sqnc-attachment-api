@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import env from '../../env.js'
+import env, { Env } from '../../env.js'
 import { singleton } from 'tsyringe'
 import { logger } from '../logger.js'
 import { Logger } from 'pino'
@@ -14,9 +14,11 @@ export interface Credential {
 @singleton()
 export class Credentials {
   private log: Logger
+  private env: Env
 
   constructor() {
     this.log = logger.child({ module: 'Credentials' })
+    this.env = env
   }
 
   async getCredentialsForOwner(ownerId: string): Promise<{ clientId: string; clientSecret: string }> {
@@ -36,10 +38,10 @@ export class Credentials {
   }
 
   private loadCredentials(): Credential[] {
-    const credentialsPath = path.resolve(process.cwd(), env.CREDENTIALS_FILE_PATH)
+    const credentialsPath = this.getCredentialsPath(this.env)
     this.log.info('Loading credentials from path: %s', credentialsPath)
 
-    const rawData = fs.readFileSync(credentialsPath, 'utf-8')
+    const rawData = this.readCredentialsFile(credentialsPath)
     this.log.debug('Successfully read credentials file, size: %d bytes', rawData.length)
 
     try {
@@ -54,5 +56,13 @@ export class Credentials {
         `Failed to parse credentials file: ${parseError instanceof Error ? parseError.message : 'unknown error'}`
       )
     }
+  }
+
+  getCredentialsPath(env: Env) {
+    return path.resolve(process.cwd(), env.CREDENTIALS_FILE_PATH)
+  }
+
+  readCredentialsFile(filePath: string) {
+    return fs.readFileSync(filePath, 'utf-8')
   }
 }
