@@ -95,7 +95,6 @@ export default class Ipfs {
     if (!dirRes.ok || !dirRes.body) {
       throw new Error(`Error fetching directory from IPFS (${dirRes.status}): ${await dirRes.text()}`)
     }
-
     // Parse stream of dir data to get the file hash
     const data = dirListValidator.parse(await dirRes.json())
     const link = data?.Objects?.[0]?.Links?.[0]

@@ -17,7 +17,7 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ['**/node_modules', '**/package.json', '**/build'],
+    ignores: ['**/node_modules', '**/package.json', '**/build', '**/docker/authzMock'],
   },
   ...compat.extends('eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'),
   {

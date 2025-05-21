@@ -53,6 +53,9 @@ const env = envalid.cleanEnv(process.env, {
     default: '',
     devDefault: 'http://www.example.com/authz',
   }),
+  CREDENTIALS_FILE_PATH: envalid.str({
+    devDefault: 'docker/config/credentials.json',
+  }),
 })
 
 export default env
