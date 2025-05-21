@@ -167,3 +167,12 @@ The top level entity `attachment`, which accepts a `multipart/form-data` payload
 - `POST /v1/attachment` - upload a file.
 - `GET /v1/attachment` - list attachments.
 - `GET /v1/attachment/{attachmentId}` - download an attachment.
+
+### Retrieving an attachment from a peer
+
+The `docker-compose.yml` has been updated with a peer service of `b` (Bob). This can be used to demonstrate that an attachment owned by Bob can be retrieved by Alice.
+
+1. You need to set the organisationData values in the polkadot ui. (To set the oidc endpoint URL - set this as preimage.)
+2. Create an attachment on Bob
+3. Then create internal attachment record on Alice or simply add this attachment to her dabatase.
+4. Attempt to retrieve the attachemnt by id or hash from Alice's swagger UI

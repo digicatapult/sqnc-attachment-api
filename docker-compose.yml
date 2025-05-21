@@ -1,5 +1,4 @@
 services:
-
   attachment-api:
     build:
       dockerfile: ./Dockerfile
@@ -41,7 +40,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=sqnc-attachment-api
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,13 +57,13 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=sqnc-identity-service
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.2.26
+    image: digicatapult/sqnc-identity-service:v4.2.29
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -86,6 +85,102 @@ services:
       - IDP_PATH_PREFIX=
       - IDP_OAUTH2_REALM=sequence
       - IDP_INTERNAL_REALM=internal
+  attachment-api-b:
+    build:
+      dockerfile: ./Dockerfile
+    container_name: attachment-api-b
+    ports:
+      - 3003:3000
+    depends_on:
+      postgres-attachment-api-b:
+        condition: service_healthy
+    command: /bin/sh -c "npx knex --env production migrate:latest && npm start"
+    volumes:
+      - ./docker/config/credentials.json:/app/docker/config/credentials.json
+    environment:
+      - LOG_LEVEL=debug
+      - DB_HOST=postgres-attachment-api-b
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=sqnc-attachment-api
+      - IPFS_HOST=ipfs
+      - IDENTITY_SERVICE_HOST=identity-service-b
+      - IDP_CLIENT_ID=sequence
+      - IDP_PUBLIC_ORIGIN=http://localhost:3080
+      - IDP_INTERNAL_ORIGIN=http://keycloak:8080
+      - IDP_PATH_PREFIX=
+      - IDP_OAUTH2_REALM=sequence
+      - IDP_INTERNAL_REALM=internal
+      - IDP_EXTERNAL_REALM=external
+      - IDP_INTERNAL_CLIENT_ID=sequence
+      - IDP_INTERNAL_CLIENT_SECRET=secret
+      - CREDENTIALS_FILE_PATH=/app/docker/config/credentials.json
+      - AUTHZ_WEBHOOK=http://mock-authz-b:3000
+  postgres-attachment-api-b:
+    image: postgres:17.4-alpine
+    container_name: postgres-attachment-api-b
+    ports:
+      - 5434:5432
+    volumes:
+      - attachment-api-storage-b:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=sqnc-attachment-api
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  sqnc-identity-service-b:
+    image: digicatapult/sqnc-identity-service:v4.2.25
+    container_name: identity-service-b
+    depends_on:
+      postgres-identity-service-b:
+        condition: service_healthy
+    command: /bin/sh -c "npm run db:migrate && npm start"
+    ports:
+      - 3004:3000
+    environment:
+      - API_HOST=sqnc-node-b
+      - DB_HOST=postgres-identity-service-b
+      - DB_PORT=5432
+      - DB_NAME=sqnc-identity-service
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - SELF_ADDRESS=5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+      - IDP_CLIENT_ID=sequence
+      - IDP_PUBLIC_ORIGIN=http://localhost:3080
+      - IDP_INTERNAL_ORIGIN=http://keycloak:8080
+      - IDP_PATH_PREFIX=
+      - IDP_OAUTH2_REALM=sequence
+      - IDP_INTERNAL_REALM=internal
+      - LOG_LEVEL=debug
+
+  postgres-identity-service-b:
+    image: postgres:17.4-alpine
+    container_name: postgres-identity-service-b
+    ports:
+      - 5435:5432
+    volumes:
+      - identity-storage-b:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=sqnc-identity-service
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sqnc-node-b:
+    image: digicatapult/sqnc-node:v12.5.1
+    container_name: node-b
+    command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
+    ports:
+      - 9954:9944
+    restart: on-failure
 
   sqnc-node:
     image: digicatapult/sqnc-node:v12.5.1
@@ -122,6 +217,15 @@ services:
       - ./docker/keycloak:/opt/keycloak/data/import
     command: start-dev --import-realm
 
+  mock-authz-b:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./docker/authzMock
+    environment:
+      - ALLOW=true
+
 volumes:
   attachment-api-storage:
   identity-storage:
+  attachment-api-storage-b:
+  identity-storage-b:

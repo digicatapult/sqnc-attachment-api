@@ -39,6 +39,7 @@ import { injectable } from 'tsyringe'
 import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
 import { z } from 'zod'
 import Authz from '../../../lib/authz.js'
+import { ExternalAttachmentService } from '../../../lib/externalAttachment/index.js'
 
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
@@ -93,7 +94,8 @@ export class AttachmentController extends Controller {
   constructor(
     private db: Database,
     private identity: Identity,
-    private authz: Authz
+    private authz: Authz,
+    private externalAttachmentService: ExternalAttachmentService
   ) {
     super()
     this.log = logger.child({ controller: '/attachment' })
@@ -208,7 +210,6 @@ export class AttachmentController extends Controller {
       throw new BadRequest('Invalid body for internal attachment creation')
     }
   }
-
   @Get('/{idOrHash}')
   @Security('oauth2')
   @Security('internal')
@@ -223,23 +224,10 @@ export class AttachmentController extends Controller {
     @Path() idOrHash: AttachmentIdOrHash
   ): Promise<unknown | Readable> {
     this.log.debug(`attempting to retrieve ${idOrHash} attachment`)
-
     const attachment = await this.findAttachmentRecord(idOrHash, req.user)
+    const self = await this.identity.getMemberBySelf()
 
-    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
-    const blobBuffer = Buffer.from(await blob.arrayBuffer())
-
-    let { filename, size } = attachment
-    if (size === null || filename === null) {
-      try {
-        await this.db.update('attachment', { id: attachment.id }, { filename: ipfsFilename, size: blob.size })
-        filename = ipfsFilename
-        size = blob.size
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'unknown'
-        this.log.warn('Error updating attachment size: %s', message)
-      }
-    }
+    const { buffer: blobBuffer, filename } = await this.getAttachmentBuffer(attachment, self)
 
     const orderedAccept = parseAccept(req.headers.accept || '*/*')
     if (filename === 'json') {
@@ -259,15 +247,17 @@ export class AttachmentController extends Controller {
         }
       }
     }
-    return this.octetResponse(blobBuffer, filename || ipfsFilename)
+    return this.octetResponse(blobBuffer, filename)
   }
-
   private async findAttachmentRecord(idOrHash: AttachmentIdOrHash, user: TsoaExpressUser) {
     const isUUID = idOrHash.match(uuidRegex)
     const where = isUUID ? { id: idOrHash } : { integrity_hash: idOrHash }
+
+    this.log.debug('Finding attachment where %j', where)
     const [attachment] = await this.db.get('attachment', where)
 
     const isExternal = user.securityName === 'external'
+    this.log.debug('External check security: %s, attachment: %j', user.securityName, where)
     if (!attachment && isExternal) {
       throw new Forbidden()
     }
@@ -281,16 +271,69 @@ export class AttachmentController extends Controller {
 
     const self = await this.identity.getMemberBySelf()
     if (attachment.owner !== self.address) {
+      this.log.debug('Attachment not owned by this instance. Expected %s got %s', self.address, attachment.owner)
       throw new Forbidden()
     }
 
     const parseRes = externalJwtParser.safeParse(user.jwt)
     if (!parseRes.success) {
+      this.log.debug('Failed to parse jwt object. Got %j', user.jwt)
       throw new Forbidden()
     }
 
     await this.authz.authorize(attachment.id, parseRes.data.organisation.chainAccount)
     return attachment
+  }
+
+  private async getAttachmentBuffer(
+    attachment: AttachmentRow,
+    self: { address: string }
+  ): Promise<{ buffer: Buffer<ArrayBuffer>; filename: string }> {
+    // If the attachment is from another owner, get it from peer
+    if (attachment.owner !== self.address) {
+      const { blobBuffer, filename } = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
+      if (attachment.filename === null && filename) {
+        try {
+          await this.db.update(
+            'attachment',
+            { id: attachment.id },
+            {
+              filename: filename,
+            }
+          )
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'unknown'
+          this.log.warn('Error updating attachment filename: %s', message)
+        }
+      }
+      return { buffer: blobBuffer, filename: filename || 'external' }
+    }
+
+    // Get from IPFS
+    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
+    const buffer = Buffer.from(await blob.arrayBuffer())
+
+    // Update attachment metadata if needed
+    if (attachment.size === null || attachment.filename === null) {
+      try {
+        await this.db.update(
+          'attachment',
+          { id: attachment.id },
+          {
+            filename: ipfsFilename,
+            size: blob.size,
+          }
+        )
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'unknown'
+        this.log.warn('Error updating attachment size: %s', message)
+      }
+    }
+
+    return {
+      buffer,
+      filename: attachment.filename || ipfsFilename,
+    }
   }
 
   @Delete('/{id}')

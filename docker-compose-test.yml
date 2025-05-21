@@ -25,4 +25,3 @@ services:
 
 volumes:
   attachment-api-storage:
-  identity-storage:
