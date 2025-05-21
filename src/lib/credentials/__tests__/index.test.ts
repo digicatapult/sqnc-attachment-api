@@ -1,5 +1,4 @@
 import { describe, it } from 'mocha'
-import { container } from 'tsyringe'
 import { Credentials } from '../index.js'
 import { expect } from 'chai'
 import sinon from 'sinon'
@@ -80,8 +79,8 @@ describe('Credentials', () => {
       })
 
       // Verify file was only read once
-      expect(readCredentialsFileStub.calledOnce).to.be.true
-      expect(readCredentialsFileStub.calledWith('/mock/path/to/credentials.json')).to.be.true
+      expect(readCredentialsFileStub.calledOnce).to.equal(true)
+      expect(readCredentialsFileStub.calledWith('/mock/path/to/credentials.json')).to.equal(true)
     })
 
     it('should throw error when file cannot be read', async () => {
