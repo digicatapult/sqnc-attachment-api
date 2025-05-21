@@ -1,13 +1,11 @@
-import { singleton } from 'tsyringe'
+import { container, singleton } from 'tsyringe'
 import { Logger } from 'pino'
 import { logger } from '../logger.js'
 import Identity from '../identity.js'
-import env from '../../env.js'
 import { AttachmentRow } from '../db/types.js'
 import { z } from 'zod'
 import contentDisposition from 'content-disposition'
-import * as fs from 'fs'
-import * as path from 'path'
+import { Credentials } from '../credentials/index.js'
 
 const OidcConfigSchema = z.object({
   token_endpoint: z.string().url(),
@@ -19,25 +17,14 @@ const AccessTokenResponseSchema = z.object({
 
 type OidcConfig = z.infer<typeof OidcConfigSchema>
 
-interface Credential {
-  username: string
-  secret: string
-  owner: string
-}
-
-function loadCredentials(): Credential[] {
-  const credentialsPath = path.resolve(process.cwd(), env.CREDENTIALS_FILE_PATH)
-  const rawData = fs.readFileSync(credentialsPath, 'utf-8')
-  const parsed = JSON.parse(rawData)
-  return parsed.credentials
-}
-
 @singleton()
 export class ExternalAttachmentService {
   private log: Logger
+  private credentials: Credentials
 
   constructor(private identity: Identity) {
     this.log = logger.child({ service: 'ExternalAttachment' })
+    this.credentials = container.resolve(Credentials)
   }
 
   async getOidcConfig(oidcConfigUrl: string): Promise<OidcConfig> {
@@ -99,7 +86,7 @@ export class ExternalAttachmentService {
     const orgData = await this.identity.getOrganisationDataByAddress(attachment.owner)
     // preconfigure the oidc endpoints so I can connect to them
     const oidcConfig = await this.getOidcConfig(orgData.oidcConfigurationEndpointAddress)
-    const creds = await this.getExternalCredentials(attachment.owner)
+    const creds = await this.credentials.getCredentialsForOwner(attachment.owner)
     const accessToken = await this.getAccessToken(oidcConfig.token_endpoint, creds.clientId, creds.clientSecret)
 
     const { blobBuffer, filename } = await this.fetchAttachment(
@@ -108,20 +95,5 @@ export class ExternalAttachmentService {
     )
 
     return { blobBuffer, filename }
-  }
-  async getExternalCredentials(ownerId: string) {
-    const credentialsData = loadCredentials()
-    const credentials = credentialsData.filter((c) => c.owner === ownerId)
-
-    if (credentials.length === 0) {
-      throw new Error(`No external credentials found for ownerId: ${ownerId}`)
-    }
-
-    // Take the first credential if multiple exist
-    const credential = credentials[0]
-    return {
-      clientId: credential.username,
-      clientSecret: credential.secret,
-    }
   }
 }
