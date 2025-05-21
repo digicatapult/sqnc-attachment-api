@@ -63,7 +63,7 @@ services:
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.2.29
+    image: digicatapult/sqnc-identity-service:v4.2.31
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -117,7 +117,7 @@ services:
       - CREDENTIALS_FILE_PATH=/app/docker/config/credentials.json
       - AUTHZ_WEBHOOK=http://mock-authz-b:3000
   postgres-attachment-api-b:
-    image: postgres:17.4-alpine
+    image: postgres:17.5-alpine
     container_name: postgres-attachment-api-b
     ports:
       - 5434:5432
@@ -133,7 +133,7 @@ services:
       timeout: 5s
       retries: 5
   sqnc-identity-service-b:
-    image: digicatapult/sqnc-identity-service:v4.2.25
+    image: digicatapult/sqnc-identity-service:v4.2.31
     container_name: identity-service-b
     depends_on:
       postgres-identity-service-b:
@@ -158,7 +158,7 @@ services:
       - LOG_LEVEL=debug
 
   postgres-identity-service-b:
-    image: postgres:17.4-alpine
+    image: postgres:17.5-alpine
     container_name: postgres-identity-service-b
     ports:
       - 5435:5432
