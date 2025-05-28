@@ -175,7 +175,7 @@ services:
       retries: 5
 
   sqnc-node-b:
-    image: digicatapult/sqnc-node:v12.5.1
+    image: digicatapult/sqnc-node:v13.0.0
     container_name: node-b
     command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
     ports:
@@ -183,7 +183,7 @@ services:
     restart: on-failure
 
   sqnc-node:
-    image: digicatapult/sqnc-node:v12.5.1
+    image: digicatapult/sqnc-node:v13.0.0
     container_name: node
     command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
     ports:
