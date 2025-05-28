@@ -63,7 +63,7 @@ services:
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.2.31
+    image: digicatapult/sqnc-identity-service:v4.2.34
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -133,7 +133,7 @@ services:
       timeout: 5s
       retries: 5
   sqnc-identity-service-b:
-    image: digicatapult/sqnc-identity-service:v4.2.31
+    image: digicatapult/sqnc-identity-service:v4.2.34
     container_name: identity-service-b
     depends_on:
       postgres-identity-service-b:
@@ -175,7 +175,7 @@ services:
       retries: 5
 
   sqnc-node-b:
-    image: digicatapult/sqnc-node:v12.5.1
+    image: digicatapult/sqnc-node:v13.0.0
     container_name: node-b
     command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
     ports:
@@ -183,7 +183,7 @@ services:
     restart: on-failure
 
   sqnc-node:
-    image: digicatapult/sqnc-node:v12.5.1
+    image: digicatapult/sqnc-node:v13.0.0
     container_name: node
     command: --base-path /data/ --dev --unsafe-rpc-external --rpc-max-connections 512 --rpc-cors all
     ports:
@@ -193,7 +193,7 @@ services:
     restart: on-failure
 
   ipfs:
-    image: ipfs/go-ipfs:v0.34.1
+    image: ipfs/go-ipfs:v0.35.0
     container_name: ipfs
     environment:
       - |
@@ -206,7 +206,7 @@ services:
       - 5001:5001
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.2.4
+    image: quay.io/keycloak/keycloak:26.2.5
     container_name: keycloak
     environment:
       - KEYCLOAK_ADMIN=admin
