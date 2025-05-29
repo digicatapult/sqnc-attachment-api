@@ -31,15 +31,16 @@ import {
 import { BadRequest, Forbidden, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
-import env from '../../../env.js'
+import env, { type Env, EnvToken } from '../../../env.js'
 import { parseDateParam } from '../../../lib/utils/queryParams.js'
 import { AttachmentRow, Where } from '../../../lib/db/types.js'
 import Identity from '../../../lib/identity.js'
-import { injectable } from 'tsyringe'
+import { inject, injectable } from 'tsyringe'
 import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
 import { z } from 'zod'
 import Authz from '../../../lib/authz.js'
 import { ExternalAttachmentService } from '../../../lib/externalAttachment/index.js'
+import S3Storage from '../../../lib/s3Storage.js'
 
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
@@ -82,16 +83,16 @@ const externalJwtParser = z.object({
 @Tags('attachment')
 export class AttachmentController extends Controller {
   log: Logger
-  ipfs: Ipfs = new Ipfs({
-    host: env.IPFS_HOST,
-    port: env.IPFS_PORT,
-    logger,
-  })
+  storage: Ipfs | S3Storage
+  // ipfs: Ipfs
+  // s3Storage: S3Storage
 
   //keep a log of looked up identities for this request to make sure they are consistently applied
   memoisedIdentities: Map<string, string> = new Map()
 
   constructor(
+    @inject(EnvToken) private env: Env,
+
     private db: Database,
     private identity: Identity,
     private authz: Authz,
@@ -99,6 +100,14 @@ export class AttachmentController extends Controller {
   ) {
     super()
     this.log = logger.child({ controller: '/attachment' })
+    this.storage =
+      env.STORAGE_TYPE === 'ipfs'
+        ? new Ipfs({
+            host: env.IPFS_HOST,
+            port: env.IPFS_PORT,
+            logger,
+          })
+        : new S3Storage(env, this.log)
   }
 
   octetResponse(buffer: Buffer, name: string): Readable {
@@ -122,6 +131,7 @@ export class AttachmentController extends Controller {
     @Query() integrityHash?: string,
     @Query() id?: UUID[]
   ): Promise<Attachment[]> {
+    // await this.storage.listBuckets()
     const query: Where<'attachment'> = [
       updated_since && (['updated_at', '>', parseDateParam(updated_since)] as const),
       integrityHash && (['integrity_hash', '=', integrityHash] as const),
@@ -167,13 +177,30 @@ export class AttachmentController extends Controller {
     const filename = file ? file.originalname : 'json'
     const fileBuffer = file?.buffer ? Buffer.from(file?.buffer) : Buffer.from(JSON.stringify(req.body))
     const fileBlob = new Blob([fileBuffer])
+    let integrityHash: string | null = null
+    let self: {
+      address: string
+      alias: string
+    } | null = null
 
-    const [integrityHash, self] = await Promise.all([
-      this.ipfs.addFile.apply(this.ipfs, [{ blob: fileBlob, filename }]),
-      this.identity.getMemberBySelf.apply(this.identity),
-    ])
+    if (this.storage instanceof Ipfs) {
+      ;[integrityHash, self] = await Promise.all([
+        this.storage.addFile.apply(this.storage, [{ blob: fileBlob, filename }]),
+        this.identity.getMemberBySelf.apply(this.identity),
+      ])
+      this.rememberThem(self)
+    }
+    if (this.storage instanceof S3Storage) {
+      // const hash = await this.storage.hashFromBuffer(fileBuffer)
+      integrityHash = await this.storage.generateCIDv0LikeIpfs(fileBuffer)
+      await this.storage.uploadFile(fileBuffer, `${integrityHash}`)
+      self = await this.identity.getMemberBySelf()
+      this.rememberThem(self)
+    }
 
-    this.rememberThem(self)
+    if (!integrityHash || !self) {
+      throw new BadRequest('Failed to generate integrity hash or get self identity')
+    }
     const [res] = await this.db.insert('attachment', {
       filename,
       owner: self.address,
@@ -209,6 +236,13 @@ export class AttachmentController extends Controller {
       this.log.warn('Invalid body for internal attachment creation: %s', err instanceof Error ? err.message : 'unknown')
       throw new BadRequest('Invalid body for internal attachment creation')
     }
+  }
+  private getFileExtension(filename: string): string | null {
+    const lastDot = filename.lastIndexOf('.')
+    if (lastDot === -1 || lastDot === filename.length - 1) {
+      return null // No extension or dot at the end
+    }
+    return filename.slice(lastDot + 1).toLowerCase()
   }
   @Get('/{idOrHash}')
   @Security('oauth2')
@@ -289,6 +323,7 @@ export class AttachmentController extends Controller {
     attachment: AttachmentRow,
     self: { address: string }
   ): Promise<{ buffer: Buffer<ArrayBuffer>; filename: string }> {
+    let buffer
     // If the attachment is from another owner, get it from peer
     if (attachment.owner !== self.address) {
       const { blobBuffer, filename } = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
@@ -310,24 +345,29 @@ export class AttachmentController extends Controller {
     }
 
     // Get from IPFS
-    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
-    const buffer = Buffer.from(await blob.arrayBuffer())
+    if (this.storage instanceof Ipfs) {
+      const { blob, filename: ipfsFilename } = await this.storage.getFile(attachment.integrity_hash)
+      buffer = Buffer.from(await blob.arrayBuffer())
 
-    // Update attachment metadata if needed
-    if (attachment.size === null || attachment.filename === null) {
-      try {
-        await this.db.update(
-          'attachment',
-          { id: attachment.id },
-          {
-            filename: ipfsFilename,
-            size: blob.size,
-          }
-        )
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'unknown'
-        this.log.warn('Error updating attachment size: %s', message)
+      // Update attachment metadata if needed
+      if (attachment.size === null || attachment.filename === null) {
+        try {
+          await this.db.update(
+            'attachment',
+            { id: attachment.id },
+            {
+              filename: ipfsFilename,
+              size: blob.size,
+            }
+          )
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'unknown'
+          this.log.warn('Error updating attachment size: %s', message)
+        }
       }
+    }
+    if (this.storage instanceof S3Storage) {
+      buffer = await this.storage.retrieveFileBuffer(attachment.integrity_hash)
     }
 
     return {
