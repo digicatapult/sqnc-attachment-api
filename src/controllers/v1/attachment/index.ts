@@ -131,7 +131,9 @@ export class AttachmentController extends Controller {
     @Query() integrityHash?: string,
     @Query() id?: UUID[]
   ): Promise<Attachment[]> {
-    // await this.storage.listBuckets()
+    if (this.storage instanceof S3Storage) {
+      await this.storage.listBuckets()
+    }
     const query: Where<'attachment'> = [
       updated_since && (['updated_at', '>', parseDateParam(updated_since)] as const),
       integrityHash && (['integrity_hash', '=', integrityHash] as const),
@@ -323,7 +325,8 @@ export class AttachmentController extends Controller {
     attachment: AttachmentRow,
     self: { address: string }
   ): Promise<{ buffer: Buffer<ArrayBuffer>; filename: string }> {
-    let buffer
+    let buffer: Buffer<ArrayBuffer> | null = null
+    let Updatedfilename: string | null = attachment.filename
     // If the attachment is from another owner, get it from peer
     if (attachment.owner !== self.address) {
       const { blobBuffer, filename } = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
@@ -336,6 +339,7 @@ export class AttachmentController extends Controller {
               filename: filename,
             }
           )
+          Updatedfilename = filename
         } catch (err) {
           const message = err instanceof Error ? err.message : 'unknown'
           this.log.warn('Error updating attachment filename: %s', message)
@@ -360,6 +364,7 @@ export class AttachmentController extends Controller {
               size: blob.size,
             }
           )
+          Updatedfilename = ipfsFilename
         } catch (err) {
           const message = err instanceof Error ? err.message : 'unknown'
           this.log.warn('Error updating attachment size: %s', message)
@@ -369,10 +374,16 @@ export class AttachmentController extends Controller {
     if (this.storage instanceof S3Storage) {
       buffer = await this.storage.retrieveFileBuffer(attachment.integrity_hash)
     }
+    if (!buffer) {
+      throw new NotFound('attachment')
+    }
+    if (!Updatedfilename) {
+      throw new NotFound('attachment')
+    }
 
     return {
       buffer,
-      filename: attachment.filename || ipfsFilename,
+      filename: Updatedfilename,
     }
   }
 

@@ -11,6 +11,7 @@ import { UnixFS } from 'ipfs-unixfs'
 import { encode as encodeBlock } from '@ipld/dag-pb'
 import * as raw from 'multiformats/hashes/sha2'
 import { CID } from 'multiformats/cid'
+import { ResultObjectStream } from '@tweedegolf/storage-abstraction/dist/types/result.js'
 
 @singleton()
 export default class S3Storage {
@@ -64,6 +65,7 @@ export default class S3Storage {
       targetPath: filename,
       bucketName: this.env.STORAGE_BUCKET_NAME,
     })
+    console.log(upload)
     if (upload.error !== null) {
       throw new Error('Failed to upload file')
     }
@@ -71,11 +73,15 @@ export default class S3Storage {
   }
 
   async retrieveFileBuffer(filename: string) {
-    const file = await this.storage.getFileAsStream(this.env.STORAGE_BUCKET_NAME, filename)
-    if (file.error !== null) {
+    const filesInBucket = await this.storage.listFiles(this.env.STORAGE_BUCKET_NAME)
+    console.log(filesInBucket)
+    const stream = await this.storage.getFileAsStream(this.env.STORAGE_BUCKET_NAME, filename)
+    if (stream.error !== null) {
       throw new Error('Failed to retrieve file')
     }
-    return file.value
+
+    const buffer = await this.resultObjectStreamToBuffer(stream)
+    return buffer
   }
 
   async listBuckets() {
@@ -142,5 +148,30 @@ export default class S3Storage {
     // Create CIDv0
     const cid = CID.createV0(hash)
     return cid.toString()
+  }
+
+  async resultObjectStreamToBuffer(result: ResultObjectStream): Promise<Buffer> {
+    if (result.error) {
+      throw new Error(`Stream error: ${result.error}`)
+    }
+
+    if (!result.value) {
+      throw new Error('No stream found in result.value')
+    }
+
+    const stream = result.value
+    const chunks: Buffer[] = []
+
+    return new Promise((resolve, reject) => {
+      stream.on('data', (chunk) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+      })
+      stream.on('end', () => {
+        resolve(Buffer.concat(chunks))
+      })
+      stream.on('error', (err) => {
+        reject(new Error(`Stream read failed: ${err.message}`))
+      })
+    })
   }
 }
