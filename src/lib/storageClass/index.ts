@@ -1,9 +1,9 @@
 import { type Logger } from 'pino'
 import { inject, singleton } from 'tsyringe'
-import { LoggerToken } from './logger.js'
+import { LoggerToken } from '../logger.js'
 import { StorageType, Storage } from '@tweedegolf/storage-abstraction'
 import all from 'it-all'
-import { type Env, EnvToken } from '../env.js'
+import { type Env, EnvToken } from '../../env.js'
 import { importer } from 'ipfs-unixfs-importer'
 import { MemoryBlockstore } from 'blockstore-core'
 import { fixedSize } from 'ipfs-unixfs-importer/chunker'
@@ -14,17 +14,15 @@ import { CID } from 'multiformats/cid'
 import { ResultObjectStream } from '@tweedegolf/storage-abstraction/dist/types/result.js'
 
 @singleton()
-export default class S3Storage {
-  private storageType: StorageType.S3 | StorageType.AZURE
+export default class StorageClass {
   private storage: Storage
   private config
   constructor(
     @inject(EnvToken) private env: Env,
     @inject(LoggerToken) private logger: Logger
   ) {
-    this.storageType = env.STORAGE_TYPE === 's3' ? StorageType.S3 : StorageType.AZURE
     this.config =
-      env.STORAGE_TYPE === 's3'
+      env.STORAGE_TYPE === 's3' || env.STORAGE_TYPE === 'minio'
         ? {
             type: StorageType.S3, // localstack and minio config
             accessKeyId: env.STORAGE_ACCESS_KEY,
@@ -43,6 +41,7 @@ export default class S3Storage {
   }
 
   async createBucketIfDoesNotExist() {
+    this.logger.info('Creating bucket if it does not exist')
     const buckets = await this.storage.listBuckets()
     if (buckets.error !== null) {
       throw new Error('Failed to list buckets')
@@ -58,6 +57,7 @@ export default class S3Storage {
   }
 
   async uploadFile(fileBuffer: Buffer, filename: string) {
+    this.logger.info('Uploading file to bucket')
     await this.createBucketIfDoesNotExist()
 
     const upload = await this.storage.addFileFromBuffer({
@@ -65,16 +65,17 @@ export default class S3Storage {
       targetPath: filename,
       bucketName: this.env.STORAGE_BUCKET_NAME,
     })
-    console.log(upload)
+    console.log(upload) // TODO: remove
     if (upload.error !== null) {
       throw new Error('Failed to upload file')
     }
-    await this.listBuckets()
+    // await this.listBuckets() // TODO: remove
   }
 
   async retrieveFileBuffer(filename: string) {
-    const filesInBucket = await this.storage.listFiles(this.env.STORAGE_BUCKET_NAME)
-    console.log(filesInBucket)
+    this.logger.info('Retrieving file from bucket')
+    const filesInBucket = await this.storage.listFiles(this.env.STORAGE_BUCKET_NAME) // TODO: remove
+    console.log(filesInBucket) // TODO: remove
     const stream = await this.storage.getFileAsStream(this.env.STORAGE_BUCKET_NAME, filename)
     if (stream.error !== null) {
       throw new Error('Failed to retrieve file')
@@ -85,6 +86,12 @@ export default class S3Storage {
   }
 
   async listBuckets() {
+    this.logger.info('Listing buckets')
+    const buckets = await this.storage.listBuckets()
+    return buckets
+  }
+
+  async test() {
     // const makeBucket = await this.storage.createBucket('test')
     // console.log(makeBucket)
     const buckets = await this.storage.listBuckets()
@@ -108,8 +115,8 @@ export default class S3Storage {
     // console.log('File saved successfully.')
   }
 
+  // unused rn, produces same hash as below method
   async hashFromBuffer(buffer: Buffer) {
-    // unused rn, produces same hash as below method
     const file = {
       content: buffer,
       path: '',
@@ -131,6 +138,7 @@ export default class S3Storage {
     return root.cid.toString()
   }
 
+  // generate hash like IPFS CIDv0
   async generateCIDv0LikeIpfs(content: Buffer) {
     // Wrap content in UnixFS "file" node
     const unixFs = new UnixFS({ type: 'file', data: content })
@@ -151,6 +159,7 @@ export default class S3Storage {
   }
 
   async resultObjectStreamToBuffer(result: ResultObjectStream): Promise<Buffer> {
+    this.logger.info('Converting result object stream to buffer')
     if (result.error) {
       throw new Error(`Stream error: ${result.error}`)
     }

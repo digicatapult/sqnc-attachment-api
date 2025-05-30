@@ -40,7 +40,7 @@ import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
 import { z } from 'zod'
 import Authz from '../../../lib/authz.js'
 import { ExternalAttachmentService } from '../../../lib/externalAttachment/index.js'
-import S3Storage from '../../../lib/s3Storage.js'
+import StorageClass from '../../../lib/storageClass/index.js'
 
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
@@ -83,9 +83,9 @@ const externalJwtParser = z.object({
 @Tags('attachment')
 export class AttachmentController extends Controller {
   log: Logger
-  storage: Ipfs | S3Storage
+  storage: Ipfs | StorageClass
   // ipfs: Ipfs
-  // s3Storage: S3Storage
+  // s3Storage: StorageClass
 
   //keep a log of looked up identities for this request to make sure they are consistently applied
   memoisedIdentities: Map<string, string> = new Map()
@@ -107,7 +107,7 @@ export class AttachmentController extends Controller {
             port: env.IPFS_PORT,
             logger,
           })
-        : new S3Storage(env, this.log)
+        : new StorageClass(env, this.log)
   }
 
   octetResponse(buffer: Buffer, name: string): Readable {
@@ -131,7 +131,7 @@ export class AttachmentController extends Controller {
     @Query() integrityHash?: string,
     @Query() id?: UUID[]
   ): Promise<Attachment[]> {
-    if (this.storage instanceof S3Storage) {
+    if (this.storage instanceof StorageClass) {
       await this.storage.listBuckets()
     }
     const query: Where<'attachment'> = [
@@ -179,26 +179,8 @@ export class AttachmentController extends Controller {
     const filename = file ? file.originalname : 'json'
     const fileBuffer = file?.buffer ? Buffer.from(file?.buffer) : Buffer.from(JSON.stringify(req.body))
     const fileBlob = new Blob([fileBuffer])
-    let integrityHash: string | null = null
-    let self: {
-      address: string
-      alias: string
-    } | null = null
 
-    if (this.storage instanceof Ipfs) {
-      ;[integrityHash, self] = await Promise.all([
-        this.storage.addFile.apply(this.storage, [{ blob: fileBlob, filename }]),
-        this.identity.getMemberBySelf.apply(this.identity),
-      ])
-      this.rememberThem(self)
-    }
-    if (this.storage instanceof S3Storage) {
-      // const hash = await this.storage.hashFromBuffer(fileBuffer)
-      integrityHash = await this.storage.generateCIDv0LikeIpfs(fileBuffer)
-      await this.storage.uploadFile(fileBuffer, `${integrityHash}`)
-      self = await this.identity.getMemberBySelf()
-      this.rememberThem(self)
-    }
+    const { integrityHash, self } = await this.uploadFile(fileBuffer, filename)
 
     if (!integrityHash || !self) {
       throw new BadRequest('Failed to generate integrity hash or get self identity')
@@ -239,12 +221,28 @@ export class AttachmentController extends Controller {
       throw new BadRequest('Invalid body for internal attachment creation')
     }
   }
-  private getFileExtension(filename: string): string | null {
-    const lastDot = filename.lastIndexOf('.')
-    if (lastDot === -1 || lastDot === filename.length - 1) {
-      return null // No extension or dot at the end
+  private async uploadFile(fileBuffer: Buffer, filename: string) {
+    let integrityHash: string | null = null
+    let self: {
+      address: string
+      alias: string
+    } | null = null
+    if (this.storage instanceof Ipfs) {
+      const fileBlob = new Blob([fileBuffer])
+      ;[integrityHash, self] = await Promise.all([
+        this.storage.addFile.apply(this.storage, [{ blob: fileBlob, filename }]),
+        this.identity.getMemberBySelf.apply(this.identity),
+      ])
+      this.rememberThem(self)
     }
-    return filename.slice(lastDot + 1).toLowerCase()
+    if (this.storage instanceof StorageClass) {
+      // const hash = await this.storage.hashFromBuffer(fileBuffer)
+      integrityHash = await this.storage.generateCIDv0LikeIpfs(fileBuffer)
+      await this.storage.uploadFile(fileBuffer, `${integrityHash}`)
+      self = await this.identity.getMemberBySelf()
+      this.rememberThem(self)
+    }
+    return { integrityHash, self }
   }
   @Get('/{idOrHash}')
   @Security('oauth2')
@@ -371,14 +369,14 @@ export class AttachmentController extends Controller {
         }
       }
     }
-    if (this.storage instanceof S3Storage) {
+    if (this.storage instanceof StorageClass) {
       buffer = await this.storage.retrieveFileBuffer(attachment.integrity_hash)
     }
     if (!buffer) {
-      throw new NotFound('attachment')
+      throw new NotFound('Unable to retrieve attachment.')
     }
     if (!Updatedfilename) {
-      throw new NotFound('attachment')
+      throw new NotFound('Unable to retrieve attachment filename.')
     }
 
     return {
