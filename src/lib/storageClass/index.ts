@@ -16,7 +16,7 @@ export default class StorageClass {
     @inject(LoggerToken) private logger: Logger
   ) {
     this.config =
-      env.STORAGE_TYPE === 's3' || env.STORAGE_TYPE === 'minio'
+      env.STORAGE_BACKEND_MODE === 's3' || env.STORAGE_BACKEND_MODE === 'minio'
         ? {
             type: StorageType.S3, // localstack and minio config
             accessKeyId: env.STORAGE_ACCESS_KEY,

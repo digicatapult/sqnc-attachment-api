@@ -101,7 +101,7 @@ export class AttachmentController extends Controller {
     super()
     this.log = logger.child({ controller: '/attachment' })
     this.storage =
-      env.STORAGE_TYPE === 'ipfs'
+      env.STORAGE_BACKEND_MODE === 'ipfs'
         ? new Ipfs({
             host: env.IPFS_HOST,
             port: env.IPFS_PORT,
@@ -236,7 +236,6 @@ export class AttachmentController extends Controller {
       this.rememberThem(self)
     }
     if (this.storage instanceof StorageClass) {
-      // const hash = await this.storage.hashFromBuffer(fileBuffer)
       integrityHash = await this.storage.hashFromBuffer(fileBuffer)
       await this.storage.uploadFile(fileBuffer, `${integrityHash}`)
       self = await this.identity.getMemberBySelf()
@@ -369,6 +368,7 @@ export class AttachmentController extends Controller {
         }
       }
     }
+    // Get from S3/Azure storage
     if (this.storage instanceof StorageClass) {
       buffer = await this.storage.retrieveFileBuffer(attachment.integrity_hash)
     }
@@ -378,7 +378,6 @@ export class AttachmentController extends Controller {
     if (!Updatedfilename) {
       throw new NotFound('Unable to retrieve attachment filename.')
     }
-    // Verify file integrity...
     await this.verifyFileIntegrity(buffer, attachment, this.storage)
 
     return {

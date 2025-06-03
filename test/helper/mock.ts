@@ -315,9 +315,9 @@ export function mockEnvWithIpfsAsStorage() {
   const testEnv: Env = cleanEnv(
     {
       ...process.env,
-      STORAGE_TYPE: 'ipfs',
+      STORAGE_BACKEND_MODE: 'ipfs',
     },
-    { ...envSchema, STORAGE_TYPE: envalid.str({ default: 'ipfs', devDefault: 'ipfs' }) }
+    { ...envSchema, STORAGE_BACKEND_MODE: envalid.str({ default: 'ipfs', devDefault: 'ipfs' }) }
   )
 
   container.registerInstance<Env>(EnvToken, testEnv)
@@ -329,9 +329,9 @@ export function mockEnvWithS3AsStorage() {
   const testEnv: Env = cleanEnv(
     {
       ...process.env,
-      STORAGE_TYPE: 's3',
+      STORAGE_BACKEND_MODE: 's3',
     },
-    { ...envSchema, STORAGE_TYPE: envalid.str({ default: 's3', devDefault: 's3' }) }
+    { ...envSchema, STORAGE_BACKEND_MODE: envalid.str({ default: 's3', devDefault: 's3' }) }
   )
 
   container.registerInstance<Env>(EnvToken, testEnv)
@@ -344,9 +344,9 @@ export function mockEnvWithAzuriteAsStorage() {
   const testEnv: Env = cleanEnv(
     {
       ...process.env,
-      STORAGE_TYPE: 'azure',
+      STORAGE_BACKEND_MODE: 'azure',
     },
-    { ...envSchema, STORAGE_TYPE: envalid.str({ default: 'azure', devDefault: 'azure' }) }
+    { ...envSchema, STORAGE_BACKEND_MODE: envalid.str({ default: 'azure', devDefault: 'azure' }) }
   )
 
   container.registerInstance<Env>(EnvToken, testEnv)
