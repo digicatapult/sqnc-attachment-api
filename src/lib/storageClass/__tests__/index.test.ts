@@ -1,26 +1,31 @@
 import { describe, it } from 'mocha'
 
 import { expect } from 'chai'
-import sinon, { SinonStubbedInstance } from 'sinon'
+import sinon from 'sinon'
 import StorageClass from '../index'
 import { container } from 'tsyringe'
-import { Storage, StorageType } from '@tweedegolf/storage-abstraction'
+import { Readable } from 'stream'
+import { resetContainer } from '../../../ioc'
+import { NotFound } from '../../error-handler'
 
-describe('StorageClass', () => {
+describe.only('StorageClass', () => {
   let storageClass: StorageClass
-  let mockStorage: SinonStubbedInstance<Storage>
   let listBucketsStub: sinon.SinonStub
   let createBucketStub: sinon.SinonStub
   let addFileFromBufferStub: sinon.SinonStub
+  let listFilesStub: sinon.SinonStub
+  let getFileAsStreamStub: sinon.SinonStub
   // should I be using a mockEnv here or is it fine if I just use normal env?
 
   beforeEach(() => {
+    resetContainer()
     sinon.restore()
     storageClass = container.resolve(StorageClass)
-    mockStorage = sinon.createStubInstance(Storage)
     listBucketsStub = sinon.stub(storageClass['storage'], 'listBuckets')
     createBucketStub = sinon.stub(storageClass['storage'], 'createBucket')
     addFileFromBufferStub = sinon.stub(storageClass['storage'], 'addFileFromBuffer')
+    listFilesStub = sinon.stub(storageClass['storage'], 'listFiles')
+    getFileAsStreamStub = sinon.stub(storageClass['storage'], 'getFileAsStream')
   })
 
   describe('listBuckets', () => {
@@ -175,6 +180,76 @@ describe('StorageClass', () => {
           bucketName: 'test',
         })
       ).to.be.equal(true)
+    })
+  })
+
+  describe('retrieveFileBuffer', () => {
+    const mockFilename = 'test.txt'
+    const mockFileContent = 'test content'
+    const mockBuffer = Buffer.from(mockFileContent)
+
+    it('should successfully retrieve file buffer', async () => {
+      listFilesStub.resolves({
+        error: null,
+        value: [mockFilename],
+      })
+
+      const mockStream = new Readable()
+      mockStream.push(mockFileContent)
+      mockStream.push(null)
+
+      getFileAsStreamStub.resolves({
+        error: null,
+        value: mockStream,
+      })
+
+      const result = await storageClass.retrieveFileBuffer(mockFilename)
+      expect(result).to.deep.equal(mockBuffer)
+      expect(getFileAsStreamStub.calledWith('test', mockFilename)).to.be.true
+    })
+
+    it('should throw error when getFileAsStream fails', async () => {
+      listFilesStub.resolves({
+        error: null,
+        value: [mockFilename],
+      })
+
+      getFileAsStreamStub.resolves({
+        error: new NotFound('Failed to retrieve file'),
+        value: null,
+      })
+
+      try {
+        await storageClass.retrieveFileBuffer(mockFilename)
+        expect.fail('Should have thrown an error')
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error)
+        expect(error.message).to.equal('Failed to retrieve file with filename: test.txt not found')
+      }
+    })
+
+    it('should throw error when stream conversion fails', async () => {
+      listFilesStub.resolves({
+        error: null,
+        value: [mockFilename],
+      })
+
+      const errorStream = new Readable()
+      errorStream._read = () => {
+        errorStream.emit('error', new Error('Stream error'))
+      }
+      getFileAsStreamStub.resolves({
+        error: null,
+        value: errorStream,
+      })
+
+      try {
+        await storageClass.retrieveFileBuffer(mockFilename)
+        expect.fail('Should have thrown an error')
+      } catch (error) {
+        expect(error).to.be.instanceOf(Error)
+        expect(error.message).to.equal('Stream read failed: Stream error')
+      }
     })
   })
 })

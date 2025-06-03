@@ -1,6 +1,9 @@
 import { MockAgent, setGlobalDispatcher, getGlobalDispatcher, Dispatcher } from 'undici'
-import env from '../../src/env.js'
-
+import env, { type Env, envSchema, EnvToken } from '../../src/env.js'
+import { resetContainer } from '../../src/ioc.js'
+import { cleanEnv, str } from 'envalid'
+import envalid from 'envalid'
+import { container } from 'tsyringe'
 export const selfAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'
 export const notSelfAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
 export const bobAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
@@ -304,4 +307,48 @@ export const withAttachmentMock = (context: MockContext) => {
       delete context.mockAgent
     }
   })
+}
+
+export function mockEnvWithIpfsAsStorage() {
+  resetContainer()
+
+  const testEnv: Env = cleanEnv(
+    {
+      ...process.env,
+      STORAGE_TYPE: 'ipfs',
+    },
+    { ...envSchema, STORAGE_TYPE: envalid.str({ default: 'ipfs', devDefault: 'ipfs' }) }
+  )
+
+  container.registerInstance<Env>(EnvToken, testEnv)
+  // console.log(testEnv)
+}
+export function mockEnvWithS3AsStorage() {
+  resetContainer()
+
+  const testEnv: Env = cleanEnv(
+    {
+      ...process.env,
+      STORAGE_TYPE: 's3',
+    },
+    { ...envSchema, STORAGE_TYPE: envalid.str({ default: 's3', devDefault: 's3' }) }
+  )
+
+  container.registerInstance<Env>(EnvToken, testEnv)
+  // console.log(testEnv)
+}
+
+export function mockEnvWithAzuriteAsStorage() {
+  resetContainer()
+
+  const testEnv: Env = cleanEnv(
+    {
+      ...process.env,
+      STORAGE_TYPE: 'azure',
+    },
+    { ...envSchema, STORAGE_TYPE: envalid.str({ default: 'azure', devDefault: 'azure' }) }
+  )
+
+  container.registerInstance<Env>(EnvToken, testEnv)
+  // console.log(testEnv)
 }

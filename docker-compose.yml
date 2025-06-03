@@ -204,6 +204,30 @@ services:
       - 4001:4001
       - 8080:8080
       - 5001:5001
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=password
+    volumes:
+      - ~/minio/data:/data
+    command: server /data --console-address ":9001"
+  localstack:
+    image: localstack/localstack
+    ports:
+      - '4566:4566' # main API
+    environment:
+      - SERVICES=s3
+      - EDGE_PORT=4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=eu-west-2
+    volumes:
+      - localstack_data:/var/lib/localstack
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.4
@@ -224,8 +248,24 @@ services:
     environment:
       - ALLOW=true
 
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite
+    ports:
+      - 10000:10000
+    volumes:
+      - ./azurite-data:/data
+      - ./azurite-logs:/logs
+      # - ./certs:/certs
+    # environment:
+    # - AZURITE_ACCOUNTS=test:test
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --location /data --debug /logs/debug.log
+
+    # --cert /certs/127.0.0.1.pem --key /certs/127.0.0.1-key.pem
+
 volumes:
   attachment-api-storage:
   identity-storage:
   attachment-api-storage-b:
   identity-storage-b:
+  localstack_data:

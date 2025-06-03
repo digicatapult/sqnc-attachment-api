@@ -237,7 +237,7 @@ export class AttachmentController extends Controller {
     }
     if (this.storage instanceof StorageClass) {
       // const hash = await this.storage.hashFromBuffer(fileBuffer)
-      integrityHash = await this.storage.generateCIDv0LikeIpfs(fileBuffer)
+      integrityHash = await this.storage.hashFromBuffer(fileBuffer)
       await this.storage.uploadFile(fileBuffer, `${integrityHash}`)
       self = await this.identity.getMemberBySelf()
       this.rememberThem(self)
@@ -378,10 +378,32 @@ export class AttachmentController extends Controller {
     if (!Updatedfilename) {
       throw new NotFound('Unable to retrieve attachment filename.')
     }
+    // Verify file integrity...
+    await this.verifyFileIntegrity(buffer, attachment, this.storage)
 
     return {
       buffer,
       filename: Updatedfilename,
+    }
+  }
+
+  private async verifyFileIntegrity(
+    buffer: Buffer,
+    attachment: AttachmentRow,
+    storage: Ipfs | StorageClass
+  ): Promise<void> {
+    let retrievedHash: string
+    if (storage instanceof Ipfs) {
+      // We can trust the IPFS hash since it's part of the IPFS protocol
+      retrievedHash = attachment.integrity_hash
+    } else {
+      // For S3/Azure storage, generate hash from retrieved buffer
+      retrievedHash = await storage.hashFromBuffer(buffer)
+    }
+
+    if (retrievedHash !== attachment.integrity_hash) {
+      this.log.error('File integrity check failed for attachment %s', attachment.id)
+      throw new BadRequest('File integrity check failed')
     }
   }
 

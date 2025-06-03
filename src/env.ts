@@ -1,6 +1,5 @@
 import * as envalid from 'envalid'
 import dotenv from 'dotenv'
-import { container } from 'tsyringe'
 
 if (process.env.NODE_ENV === 'test') {
   dotenv.config({ path: 'test/test.env' })
@@ -10,7 +9,7 @@ if (process.env.NODE_ENV === 'test') {
   dotenv.config()
 }
 
-const env = envalid.cleanEnv(process.env, {
+export const envSchema = {
   PORT: envalid.port({ default: 3000 }),
   LOG_LEVEL: envalid.str({ default: 'info', devDefault: 'debug' }),
   DB_HOST: envalid.str({ devDefault: 'localhost' }),
@@ -68,13 +67,16 @@ const env = envalid.cleanEnv(process.env, {
   }), // the accountKey
   STORAGE_PROTOCOL: envalid.str({ default: 'http', devDefault: 'http' }), // 'http' or 'https'
   STORAGE_BUCKET_NAME: envalid.str({ default: 'test' }),
-})
+}
+const env = envalid.cleanEnv(process.env, envSchema)
 
 export default env
 
 export const EnvToken = Symbol('Env')
 export type Env = typeof env
 
-container.register<Env>(EnvToken, {
-  useValue: env,
-})
+// resolve now at the index
+
+// container.register<Env>(EnvToken, {
+//   useValue: env,
+// })
