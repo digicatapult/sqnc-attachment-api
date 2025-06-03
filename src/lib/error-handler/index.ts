@@ -75,6 +75,7 @@ export const errorHandler = function errorHandler(
     res.status(401).send({
       message: 'Forbidden',
     })
+    return
   }
   if (err instanceof ValidateError) {
     logger.warn(`Handled Validation Error for ${req.path}: %s`, JSON.stringify(err.fields))
@@ -85,19 +86,23 @@ export const errorHandler = function errorHandler(
       ...rest,
       message: 'Validation failed',
     })
+    return
   }
   if (err instanceof ServiceUnavailable) {
     logger.warn('Error thrown in Health Watcher')
     res.status(err.code).json(err.data)
+    return
   }
   if (err instanceof HttpResponse) {
     logger.warn('Error thrown in handler: %s', err.message)
     res.status(err.code).json(err.message)
+    return
   }
   if (err instanceof Error) {
     logger.error('Unexpected error thrown in handler: %s', err.message)
 
     res.status(500).json(err)
+    return
   }
 
   next()
