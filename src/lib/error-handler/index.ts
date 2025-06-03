@@ -70,34 +70,39 @@ export const errorHandler = function errorHandler(
   req: ExRequest,
   res: ExResponse,
   next: NextFunction
-): ExResponse | void {
+): void {
   if (err instanceof OauthError || err instanceof AggregateOAuthError || err instanceof Forbidden) {
-    return res.status(401).send({
+    res.status(401).send({
       message: 'Forbidden',
     })
+    return
   }
   if (err instanceof ValidateError) {
     logger.warn(`Handled Validation Error for ${req.path}: %s`, JSON.stringify(err.fields))
 
     const { status, ...rest } = err
 
-    return res.status(422).send({
+    res.status(422).send({
       ...rest,
       message: 'Validation failed',
     })
+    return
   }
   if (err instanceof ServiceUnavailable) {
     logger.warn('Error thrown in Health Watcher')
-    return res.status(err.code).json(err.data)
+    res.status(err.code).json(err.data)
+    return
   }
   if (err instanceof HttpResponse) {
     logger.warn('Error thrown in handler: %s', err.message)
-    return res.status(err.code).json(err.message)
+    res.status(err.code).json(err.message)
+    return
   }
   if (err instanceof Error) {
     logger.error('Unexpected error thrown in handler: %s', err.message)
 
-    return res.status(500).json(err)
+    res.status(500).json(err)
+    return
   }
 
   next()

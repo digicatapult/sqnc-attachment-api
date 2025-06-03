@@ -1,7 +1,6 @@
 import express, { Express } from 'express'
 import { setup, serve, SwaggerUiOptions } from 'swagger-ui-express'
 import cors from 'cors'
-import bodyParser from 'body-parser'
 import promBundle from 'express-prom-bundle'
 
 import { errorHandler } from './lib/error-handler/index.js'
@@ -44,8 +43,8 @@ export default async (): Promise<Express> => {
     customSiteTitle: API_SWAGGER_TITLE,
   }
 
-  app.use(bodyParser.urlencoded({ extended: true }))
-  app.use(bodyParser.json())
+  app.use(express.urlencoded({ extended: true }))
+  app.use(express.json())
   app.use(cors())
   app.use(promClient)
 
@@ -57,7 +56,9 @@ export default async (): Promise<Express> => {
   })
 
   const apiSpec = await loadApiSpec()
-  app.get('/api-docs', (_req, res) => res.json(apiSpec))
+  app.get('/api-docs', (_req, res) => {
+    res.json(apiSpec)
+  })
   app.use('/swagger', serve, setup(undefined, options))
 
   RegisterRoutes(app, {
