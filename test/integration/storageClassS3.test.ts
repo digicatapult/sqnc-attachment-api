@@ -5,7 +5,17 @@ import { expect } from 'chai'
 import createHttpServer from '../../src/server.js'
 import { get, postFile } from '../helper/routeHelper.js'
 import { MockContext, withIdentityMock, withAttachmentMock, mockEnvWithS3AsStorage } from '../helper/mock.js'
-import { cleanup, parametersAttachmentId, attachmentSeed, nonExistentAttachmentId } from '../seeds/attachment.seed.js'
+import {
+  cleanup,
+  parametersAttachmentId,
+  attachmentSeed,
+  nonExistentAttachmentId,
+  attachmentSeedWithIncorrectHash,
+} from '../seeds/attachment.seed.js'
+import StorageClass from '../../src/lib/storageClass/index.js'
+import { logger } from '../../src/lib/logger.js'
+import { type Env, EnvToken } from '../../src/env.js'
+import { container } from 'tsyringe'
 
 // need to change/ re-register an env for the storage class - think we did this in matchmaker api
 
@@ -55,9 +65,32 @@ describe('attachment From S3', () => {
     beforeEach(async () => {
       await attachmentSeed()
     })
+    afterEach(async () => {
+      await cleanup()
+    })
     it('get attachment which exists in local db but not in Azurite storage', async () => {
       const { status, body } = await get(app, `/v1/attachment/${parametersAttachmentId}`)
       expect(status).to.equal(404)
+      expect(body).to.contain('Failed to retrieve file with filename: hash1 not found')
+    })
+  })
+  describe('S3 retrieve file with the wrong hash should fail integrity check', () => {
+    let wrongHash: string = 'wrongHash'
+    beforeEach(async () => {
+      const env = container.resolve<Env>(EnvToken) // resolve test env
+      const storage = new StorageClass(env, logger)
+      await storage.uploadFile(Buffer.from(blobData), wrongHash)
+
+      await attachmentSeedWithIncorrectHash()
+    })
+    afterEach(async () => {
+      await cleanup()
+    })
+    it('try to retrieve file with the wrong hash - should fail integrity check', async () => {
+      const { status, body } = await get(app, `/v1/attachment/${wrongHash}`)
+      console.log(body)
+      expect(status).to.equal(400)
+      expect(body).to.contain('File integrity check failed')
     })
   })
 })
