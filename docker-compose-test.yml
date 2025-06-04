@@ -54,12 +54,7 @@ services:
     volumes:
       - ./azurite-data:/data
       - ./azurite-logs:/logs
-      # - ./certs:/certs
-    # environment:
-    # - AZURITE_ACCOUNTS=test:test
     command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --location /data --debug /logs/debug.log
-
-    # --cert /certs/127.0.0.1.pem --key /certs/127.0.0.1-key.pem
 
 volumes:
   attachment-api-storage:
