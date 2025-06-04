@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "3.1.1",
+  "version": "3.1.13",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -69,8 +69,6 @@
     "undici": "^7.9.0"
   },
   "dependencies": {
-    "@azure/identity": "^4.10.0",
-    "@azure/storage-blob": "^12.27.0",
     "@digicatapult/tsoa-oauth-express": "^1.0.24",
     "@grpc/grpc-js": "^1.13.3",
     "@opentelemetry/auto-instrumentations-node": "^0.59.0",
