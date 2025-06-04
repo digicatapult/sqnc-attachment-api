@@ -69,14 +69,13 @@
     "undici": "^7.10.0"
   },
   "dependencies": {
-    "@tweedegolf/sab-adapter-amazon-s3": "^1.0.17",
-    "@tweedegolf/sab-adapter-azure-blob": "^1.0.7",
-    "@tweedegolf/storage-abstraction": "^2.1.6",
-    "body-parser": "^2.2.0",
     "@digicatapult/tsoa-oauth-express": "^2.0.0",
     "@grpc/grpc-js": "^1.13.4",
     "@opentelemetry/auto-instrumentations-node": "^0.59.0",
     "@tsoa/runtime": "^6.6.0",
+    "@tweedegolf/sab-adapter-amazon-s3": "^1.0.17",
+    "@tweedegolf/sab-adapter-azure-blob": "^1.0.7",
+    "@tweedegolf/storage-abstraction": "^2.1.6",
     "content-disposition": "^0.5.4",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
