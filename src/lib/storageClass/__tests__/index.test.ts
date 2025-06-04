@@ -205,7 +205,7 @@ describe.only('StorageClass', () => {
 
       const result = await storageClass.retrieveFileBuffer(mockFilename)
       expect(result).to.deep.equal(mockBuffer)
-      expect(getFileAsStreamStub.calledWith('test', mockFilename)).to.be.true
+      expect(getFileAsStreamStub.calledWith('test', mockFilename)).to.be.equal(true)
     })
 
     it('should throw error when getFileAsStream fails', async () => {

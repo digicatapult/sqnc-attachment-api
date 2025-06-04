@@ -2,7 +2,7 @@ import 'reflect-metadata'
 import { Express } from 'express'
 
 import Server from './server.js'
-import env, { type Env, EnvToken } from './env.js'
+import { type Env, EnvToken } from './env.js'
 import { logger } from './lib/logger.js'
 import { container } from 'tsyringe'
 import { resetContainer } from './ioc.js'

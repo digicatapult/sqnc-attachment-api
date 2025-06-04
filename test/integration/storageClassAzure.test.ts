@@ -76,7 +76,7 @@ describe('attachment From Azurite', () => {
     })
   })
   describe('Azurite retrieve file with the wrong hash should fail integrity check', () => {
-    let wrongHash: string = 'wrongHash'
+    const wrongHash: string = 'wrongHash'
     beforeEach(async () => {
       const env = container.resolve<Env>(EnvToken) // resolve test env
       const storage = new StorageClass(env, logger)

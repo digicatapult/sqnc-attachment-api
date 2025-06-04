@@ -75,7 +75,7 @@ describe('attachment From S3', () => {
     })
   })
   describe('S3 retrieve file with the wrong hash should fail integrity check', () => {
-    let wrongHash: string = 'wrongHash'
+    const wrongHash: string = 'wrongHash'
     beforeEach(async () => {
       const env = container.resolve<Env>(EnvToken) // resolve test env
       const storage = new StorageClass(env, logger)
@@ -88,7 +88,6 @@ describe('attachment From S3', () => {
     })
     it('try to retrieve file with the wrong hash - should fail integrity check', async () => {
       const { status, body } = await get(app, `/v1/attachment/${wrongHash}`)
-      console.log(body)
       expect(status).to.equal(400)
       expect(body).to.contain('File integrity check failed')
     })

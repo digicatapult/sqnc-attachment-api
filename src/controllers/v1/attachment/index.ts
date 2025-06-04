@@ -31,7 +31,7 @@ import {
 import { BadRequest, Forbidden, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
-import env, { type Env, EnvToken } from '../../../env.js'
+import { type Env, EnvToken } from '../../../env.js'
 import { parseDateParam } from '../../../lib/utils/queryParams.js'
 import { AttachmentRow, Where } from '../../../lib/db/types.js'
 import Identity from '../../../lib/identity.js'

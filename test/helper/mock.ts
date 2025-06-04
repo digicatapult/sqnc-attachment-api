@@ -1,7 +1,7 @@
 import { MockAgent, setGlobalDispatcher, getGlobalDispatcher, Dispatcher } from 'undici'
 import env, { type Env, envSchema, EnvToken } from '../../src/env.js'
 import { resetContainer } from '../../src/ioc.js'
-import { cleanEnv, str } from 'envalid'
+import { cleanEnv } from 'envalid'
 import envalid from 'envalid'
 import { container } from 'tsyringe'
 export const selfAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'
