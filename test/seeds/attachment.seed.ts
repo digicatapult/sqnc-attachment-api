@@ -62,3 +62,17 @@ export const additionalAttachmentSeed = async () => {
     updated_at: new Date(exampleDate),
   })
 }
+
+export const attachmentSeedWithIncorrectHash = async () => {
+  const db = container.resolve(Database)
+
+  await db.insert('attachment', {
+    id: parametersAttachmentId,
+    filename: 'test4.txt',
+    integrity_hash: 'wrongHash',
+    owner: selfAddress,
+    size: 42,
+    created_at: new Date(exampleDate),
+    updated_at: new Date(exampleDate),
+  })
+}

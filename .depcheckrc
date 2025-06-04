@@ -8,4 +8,6 @@ ignores: [
   'ts-node',
   '@grpc/grpc-js',
   '@opentelemetry/auto-instrumentations-node',
+  '@tweedegolf/sab-adapter-amazon-s3',
+  '@tweedegolf/sab-adapter-azure-blob'
 ]

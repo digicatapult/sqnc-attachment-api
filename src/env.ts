@@ -1,6 +1,5 @@
 import * as envalid from 'envalid'
 import dotenv from 'dotenv'
-import { container } from 'tsyringe'
 
 if (process.env.NODE_ENV === 'test') {
   dotenv.config({ path: 'test/test.env' })
@@ -10,7 +9,7 @@ if (process.env.NODE_ENV === 'test') {
   dotenv.config()
 }
 
-const env = envalid.cleanEnv(process.env, {
+export const envSchema = {
   PORT: envalid.port({ default: 3000 }),
   LOG_LEVEL: envalid.str({ default: 'info', devDefault: 'debug' }),
   DB_HOST: envalid.str({ devDefault: 'localhost' }),
@@ -56,13 +55,22 @@ const env = envalid.cleanEnv(process.env, {
   CREDENTIALS_FILE_PATH: envalid.str({
     devDefault: 'docker/config/credentials.json',
   }),
-})
+  STORAGE_BACKEND_MODE: envalid.str({ default: 's3', devDefault: 'azure' }), // 's3' or 'azure' or 'ipfs'
+  S3_HOST: envalid.host({ devDefault: 'localhost' }),
+  S3_PORT: envalid.port({ devDefault: 4566 }),
+  S3_REGION: envalid.str({ devDefault: 'eu-west-2' }), // unnecessary if we'll never wan tto change this
+  AZURE_HOST: envalid.host({ devDefault: 'localhost' }),
+  AZURE_PORT: envalid.port({ devDefault: 10000 }),
+  STORAGE_ACCESS_KEY: envalid.str({ devDefault: 'devstoreaccount1' }), // the accountName
+  STORAGE_SECRET_KEY: envalid.str({
+    devDefault: 'Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==',
+  }), // the accountKey
+  STORAGE_PROTOCOL: envalid.str({ default: 'http', devDefault: 'http' }), // 'http' or 'https'
+  STORAGE_BUCKET_NAME: envalid.str({ default: 'test' }),
+}
+const env = envalid.cleanEnv(process.env, envSchema)
 
 export default env
 
 export const EnvToken = Symbol('Env')
 export type Env = typeof env
-
-container.register<Env>(EnvToken, {
-  useValue: env,
-})

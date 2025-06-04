@@ -23,6 +23,7 @@ import {
   withAuthzMock,
   selfAddress,
   withAttachmentMock,
+  mockEnvWithIpfsAsStorage,
 } from '../helper/mock.js'
 import {
   cleanup,
@@ -49,6 +50,7 @@ describe('attachment', () => {
   withIdentityMock(context)
   withAttachmentMock(context)
   before(async () => {
+    mockEnvWithIpfsAsStorage()
     app = await createHttpServer()
   })
 
