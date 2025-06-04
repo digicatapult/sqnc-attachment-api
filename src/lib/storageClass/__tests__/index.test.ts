@@ -8,7 +8,7 @@ import { Readable } from 'stream'
 import { resetContainer } from '../../../ioc'
 import { NotFound } from '../../error-handler'
 
-describe.only('StorageClass', () => {
+describe('StorageClass', () => {
   let storageClass: StorageClass
   let listBucketsStub: sinon.SinonStub
   let createBucketStub: sinon.SinonStub
