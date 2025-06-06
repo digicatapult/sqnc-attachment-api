@@ -1,5 +1,5 @@
 import { type Knex } from 'knex'
-import { container, inject, singleton } from 'tsyringe'
+import { inject, singleton } from 'tsyringe'
 import { z } from 'zod'
 
 import Zod, { ColumnsByType, IDatabase, Models, Order, TABLE, Update, Where, tablesList } from './types.js'
@@ -82,5 +82,3 @@ export default class Database {
     })
   }
 }
-
-container.register(Database, { useValue: new Database() })

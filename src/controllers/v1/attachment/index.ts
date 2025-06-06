@@ -41,6 +41,7 @@ import { z } from 'zod'
 import Authz from '../../../lib/authz.js'
 import { ExternalAttachmentService } from '../../../lib/externalAttachment/index.js'
 import StorageClass from '../../../lib/storageClass/index.js'
+import { CID } from 'multiformats/cid'
 
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
@@ -84,8 +85,6 @@ const externalJwtParser = z.object({
 export class AttachmentController extends Controller {
   log: Logger
   storage: Ipfs | StorageClass
-  // ipfs: Ipfs
-  // s3Storage: StorageClass
 
   //keep a log of looked up identities for this request to make sure they are consistently applied
   memoisedIdentities: Map<string, string> = new Map()
@@ -190,6 +189,7 @@ export class AttachmentController extends Controller {
       owner: self.address,
       integrity_hash: integrityHash,
       size: fileBlob.size,
+      encoding: this.identifyHash(integrityHash),
     })
 
     return this.transformAttachment(res)
@@ -202,12 +202,14 @@ export class AttachmentController extends Controller {
     const { ownerAddress, integrityHash } = this.parseInternalCreateBody(req.body)
 
     this.log.debug(`creating an internal attachment with hash: ${integrityHash} for owner: ${ownerAddress}`)
+    const hashType = this.identifyHash(integrityHash)
 
     const [res] = await this.db.insert('attachment', {
       owner: ownerAddress,
       integrity_hash: integrityHash,
       filename: null,
       size: null,
+      encoding: hashType,
     })
 
     return this.transformAttachment(res)
@@ -328,12 +330,14 @@ export class AttachmentController extends Controller {
     if (attachment.owner !== self.address) {
       const { blobBuffer, filename } = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
       if (attachment.filename === null && filename) {
+        const hashType = this.identifyHash(attachment.integrity_hash)
         try {
           await this.db.update(
             'attachment',
             { id: attachment.id },
             {
               filename: filename,
+              encoding: hashType,
             }
           )
           Updatedfilename = filename
@@ -393,8 +397,11 @@ export class AttachmentController extends Controller {
   ): Promise<void> {
     let retrievedHash: string
     if (storage instanceof Ipfs) {
+      if (!attachment.filename) {
+        throw new BadRequest('Unable to retrieve attachment filename. Cannot confirm hash integrity.')
+      }
       // We can trust the IPFS hash since it's part of the IPFS protocol
-      retrievedHash = attachment.integrity_hash
+      retrievedHash = await storage.cidHashFromBuffer(buffer, attachment.filename)
     } else {
       // For S3/Azure storage, generate hash from retrieved buffer
       retrievedHash = await storage.hashFromBuffer(buffer)
@@ -448,5 +455,23 @@ export class AttachmentController extends Controller {
   private rememberThem({ alias, address }: { alias: string; address: string }) {
     this.memoisedIdentities.set(alias, address)
     this.memoisedIdentities.set(address, alias)
+  }
+
+  private identifyHash(input: string): 'cidv0' | 'cidv1' | 'sha256' {
+    try {
+      this.log.debug('Trying to parse hash as CID for %s', input)
+      const cid = CID.parse(input)
+      if (cid.version === 1) throw new BadRequest('CID v1 is not supported')
+      if (cid.version === 0) return 'cidv0'
+    } catch {
+      this.log.debug('Not a valid CID')
+    }
+    this.log.debug('Not a valid CID, trying to parse hash as SHA-256')
+    const sha256Regex = /^[a-fA-F0-9]{64}$/
+    if (sha256Regex.test(input)) {
+      return 'sha256'
+    }
+
+    throw new BadRequest('Invalid hash type')
   }
 }

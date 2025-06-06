@@ -84,7 +84,7 @@ export class ExternalAttachmentService {
 
   public async getAttachmentFromPeer(attachment: AttachmentRow) {
     const orgData = await this.identity.getOrganisationDataByAddress(attachment.owner)
-    // preconfigure the oidc endpoints so I can connect to them
+    // you have to pre-configure the oidc endpoints in polkadot ui so you can connect to them
     const oidcConfig = await this.getOidcConfig(orgData.oidcConfigurationEndpointAddress)
     const creds = await this.credentials.getCredentialsForOwner(attachment.owner)
     const accessToken = await this.getAccessToken(oidcConfig.token_endpoint, creds.clientId, creds.clientSecret)

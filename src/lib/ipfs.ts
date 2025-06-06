@@ -4,6 +4,10 @@ import { z } from 'zod'
 
 import { serviceState } from './service-watcher/statusPoll.js'
 import { HttpResponse } from './error-handler/index.js'
+import { importer } from 'ipfs-unixfs-importer'
+import { MemoryBlockstore } from 'blockstore-core'
+import { fixedSize } from 'ipfs-unixfs-importer/chunker'
+import all from 'it-all'
 
 interface FilestoreResponse {
   Name: string
@@ -155,6 +159,29 @@ export default class Ipfs {
         },
       }
     }
+  }
+  async cidHashFromBuffer(buffer: Buffer, filename: string) {
+    const file = {
+      content: buffer,
+      path: filename, // need filename to produce correct cid
+    }
+    const blockstore = new MemoryBlockstore()
+
+    const entries = await all(
+      importer([file], blockstore, {
+        cidVersion: 0,
+        rawLeaves: false,
+        wrapWithDirectory: true,
+        chunker: fixedSize({ chunkSize: 262144 }), // 256 KB chunks
+      })
+    )
+    const root = entries.at(-1)
+    if (!root) {
+      throw new Error('No root found')
+    }
+    console.log('root.cid', root.cid)
+
+    return root.cid.toString()
   }
 }
 
