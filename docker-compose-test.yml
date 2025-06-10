@@ -23,7 +23,7 @@ services:
       - ./docker/keycloak:/opt/keycloak/data/import
     command: start-dev --import-realm
   minio:
-    image: quay.io/minio/minio
+    image: bitnami/minio:latest
     container_name: minio
     ports:
       - 9000:9000
@@ -32,7 +32,7 @@ services:
       - MINIO_ROOT_USER=minio
       - MINIO_ROOT_PASSWORD=password
     volumes:
-      - ~/minio/data:/data
+      - ./minio/data:/data
     command: server /data --console-address ":9001"
   localstack:
     image: localstack/localstack

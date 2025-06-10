@@ -55,12 +55,10 @@ export const envSchema = {
   CREDENTIALS_FILE_PATH: envalid.str({
     devDefault: 'docker/config/credentials.json',
   }),
-  STORAGE_BACKEND_MODE: envalid.str({ devDefault: 's3' }), // 's3' or 'azure' or 'ipfs'
+  STORAGE_BACKEND_MODE: envalid.str({ devDefault: 'S3' }), // 'S3' or 'AZURE' or 'IPFS'
   STORAGE_BACKEND_HOST: envalid.host({ devDefault: 'localhost' }),
   STORAGE_BACKEND_PORT: envalid.port({ devDefault: 4566 }),
   STORAGE_BACKEND_S3_REGION: envalid.str({ devDefault: 'eu-west-2' }),
-  // AZURE_HOST: envalid.host({ devDefault: 'localhost' }),
-  // AZURE_PORT: envalid.port({ devDefault: 10000 }),
   STORAGE_BACKEND_ACCESS_KEY_ID: envalid.str({ devDefault: 'bUSVDwGm5KsvrOAJ5keT' }), // for minio s3
   STORAGE_BACKEND_SECRET_ACCESS_KEY: envalid.str({ devDefault: 'MuFMyporttNkz6m94RcCQuMkMTChvAM4fkc71xC4' }), // for minio s3
   STORAGE_BACKEND_ACCOUNT_NAME: envalid.str({ devDefault: 'devstoreaccount1' }), // the accountName for azure
@@ -68,7 +66,7 @@ export const envSchema = {
     devDefault: 'Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==',
   }), // the accountKey for azurite
   STORAGE_BACKEND_PROTOCOL: envalid.str({ default: 'http', devDefault: 'http' }), // 'http' or 'https'
-  STORAGE_BACKEND_BUCKET_NAME: envalid.str({ default: 'test' }),
+  STORAGE_BACKEND_BUCKET_NAME: envalid.str({ devDefault: 'test' }),
 }
 const env = envalid.cleanEnv(process.env, envSchema)
 

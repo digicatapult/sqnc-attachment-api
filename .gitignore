@@ -6,7 +6,7 @@ src/swagger.json
 src/routes.ts
 dist
 azurite-data/
-azurite-logs/
+minio/
 
 .npm
 .env
