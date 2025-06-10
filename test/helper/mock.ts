@@ -324,11 +324,11 @@ export function mockEnvWithS3AsStorage() {
   const testEnv: Env = cleanEnv(
     {
       ...process.env,
-      STORAGE_BACKEND_MODE: 's3',
+      STORAGE_BACKEND_MODE: 'S3',
     },
     {
       ...envSchema,
-      STORAGE_BACKEND_MODE: envalid.str({ default: 's3', devDefault: 's3' }),
+      STORAGE_BACKEND_MODE: envalid.str({ default: 'S3', devDefault: 'S3' }),
       STORAGE_BACKEND_HOST: envalid.host({ default: 'localhost', devDefault: 'localhost' }),
       STORAGE_BACKEND_PORT: envalid.port({ default: 4566, devDefault: 4566 }),
     }
@@ -343,11 +343,11 @@ export function mockEnvWithAzuriteAsStorage() {
   const testEnv: Env = cleanEnv(
     {
       ...process.env,
-      STORAGE_BACKEND_MODE: 'azure',
+      STORAGE_BACKEND_MODE: 'AZURE',
     },
     {
       ...envSchema,
-      STORAGE_BACKEND_MODE: envalid.str({ default: 'azure', devDefault: 'azure' }),
+      STORAGE_BACKEND_MODE: envalid.str({ default: 'AZURE', devDefault: 'AZURE' }),
       STORAGE_BACKEND_HOST: envalid.host({ default: 'localhost', devDefault: 'localhost' }),
       STORAGE_BACKEND_PORT: envalid.port({ default: 10000, devDefault: 10000 }),
     }
