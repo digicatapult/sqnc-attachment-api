@@ -17,7 +17,7 @@ import { logger } from '../../src/lib/logger.js'
 import { type Env, EnvToken } from '../../src/env.js'
 import { container } from 'tsyringe'
 
-// need to change/ re-register an env for the storage class - think we did this in matchmaker api
+// need to change/re-register an env for the storage class - think we did this in matchmaker api
 
 describe('attachment From S3', () => {
   const size = 100

@@ -18,7 +18,7 @@ import { logger } from '../../src/lib/logger.js'
 import { EnvToken } from '../../src/env.js'
 import { container } from 'tsyringe'
 import { type Env } from '../../src/env.js'
-// need to change/ re-register an env for the storage class - think we did this in matchmaker api
+// need to change/re-register an env for the storage class
 
 describe('attachment From Azurite', () => {
   const size = 100
