@@ -24,7 +24,6 @@ import {
   selfAddress,
   withAttachmentMock,
   mockEnvWithIpfsAsStorage,
-  withIpfsMockTest,
 } from '../helper/mock.js'
 import {
   cleanup,
@@ -44,12 +43,10 @@ describe('attachment', () => {
   const overSize = 115343360
   const overSizeBlobData = 'a'.repeat(overSize)
   const jsonData = { key: 'it', filename: 'JSON attachment it' }
-  const dataToRetrieveByInternal = { key: 'internalData', filename: 'JSON attachment internalData' }
+  const dataToRetrieveByInternal = { key: 'internalData', filename: 'json' }
   const blobDataCidV0 = 'QmXrvgzuTm4YnaVGyQmNm9kef2ica6DTGUpmWg8eAVi5dV'
   const jsonDataCidV0 = 'QmcASNAZW7eWhPVJY948179VKDDJepM7dan3UXZYC2C4Ek'
-  // const jsonDataInternalCidV0 = 'QmS2JWZj8kMNHZQd7qSrfJDp8n54Ump236HDU5kDCLCc5m'
-  // const jsonDataInternalCidV0 = 'QmaT82csdi3PrVPcpfEaXYn6K2WpaQ8GRkwMm8Jz9nh2sb'
-  const jsonDataInternalCidV0 = 'QmRY67yZ5Ff4gaCJFq8zVWQwx7L9GbCzUPC8GgoYaKyY4d'
+  const jsonDataInternalCidV0 = 'QmZMDdpEzC7JduJ3Z5F9w1uXwMAybijiH7ZHaKcZhLQR4D'
 
   const jsonDataCreateInternal = {
     integrityHash: jsonDataInternalCidV0,
@@ -411,15 +408,9 @@ describe('attachment', () => {
   // this test ensures if we perform an "internal" body request but as an external part it is NOT
   // treated as an internal upload. Instead the file is uploaded as a json file
   describe('uploads and retrieves an attachment [internal body as json]', () => {
-    withIpfsMockTest(dataToRetrieveByInternal, context, jsonDataInternalCidV0)
-
+    withIpfsMock(dataToRetrieveByInternal, context, jsonDataInternalCidV0)
     let jsonRes: supertest.Response
     beforeEach(async () => {
-      // const ipfs = new Ipfs({ host: env.IPFS_HOST, port: env.IPFS_PORT, logger })
-
-      // const jsonString = JSON.stringify(dataToRetrieveByInternal)
-      // const hash = await ipfs.cidHashFromBuffer(Buffer.from(jsonString), 'json')
-      // console.log('internal new hash', hash)
       jsonRes = await postInternal(app, '/v1/attachment', jsonDataCreateInternal)
     })
 
@@ -433,16 +424,15 @@ describe('attachment', () => {
     it('returns JSON attachment', async () => {
       const { id } = jsonRes.body
       const { status, body } = await get(app, `/v1/attachment/${id}`, { accept: 'application/json' })
-      const json = await JSON.parse(body.toString())
       expect(status).to.equal(200)
-      expect(json).to.contain(dataToRetrieveByInternal)
+      expect(body).to.contain(dataToRetrieveByInternal)
     })
   })
 
   describe('uploads and retrieves an attachment [internal]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMockTest(dataToRetrieveByInternal, context, jsonDataInternalCidV0)
+    withIpfsMock(dataToRetrieveByInternal, context, jsonDataInternalCidV0)
 
     beforeEach(async () => {
       jsonRes = await postInternal(app, '/v1/attachment', jsonDataCreateInternal)
@@ -476,9 +466,8 @@ describe('attachment', () => {
     it('returns JSON attachment', async () => {
       const { id } = jsonRes.body
       const { status, body } = await get(app, `/v1/attachment/${id}`, { accept: 'application/json' })
-      const json = await JSON.parse(body.toString())
       expect(status).to.equal(200)
-      expect(json).to.deep.contain(dataToRetrieveByInternal) // this now returns an octet stream even if it's plain json is that ok?
+      expect(body).to.deep.contain(dataToRetrieveByInternal)
     })
 
     it('returns first attachment when fetching by hash', async () => {
@@ -487,7 +476,7 @@ describe('attachment', () => {
       const res = await get(app, `/v1/attachment/${jsonDataInternalCidV0}`, { accept: 'application/octet-stream' })
       expect(res.status).to.equal(200)
       expect(res.header).to.deep.contain({
-        'content-disposition': 'attachment; filename="JSON attachment internalData"',
+        'content-disposition': 'attachment; filename="json"',
       })
     })
 

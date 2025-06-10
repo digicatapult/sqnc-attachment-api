@@ -7,56 +7,12 @@ import { container } from 'tsyringe'
 export const selfAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'
 export const notSelfAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
 export const bobAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
-export const blobDataCidV0 = 'QmXrvgzuTm4YnaVGyQmNm9kef2ica6DTGUpmWg8eAVi5dV'
-export const jsonDataCidV0 = 'QmcASNAZW7eWhPVJY948179VKDDJepM7dan3UXZYC2C4Ek'
 
 export type MockContext = {
   originalDispatcher?: Dispatcher
   mockAgent?: MockAgent
 }
 
-export const withIpfsMockTest = (fileContent: string | object | Buffer, context: MockContext, hash: string) => {
-  beforeEach(function () {
-    context.originalDispatcher = context.originalDispatcher || getGlobalDispatcher()
-    if (!context.mockAgent) {
-      context.mockAgent = new MockAgent()
-      setGlobalDispatcher(context.mockAgent)
-    }
-    const mockIpfs = context.mockAgent.get(`http://${env.IPFS_HOST}:${env.IPFS_PORT}`)
-
-    if (fileContent) {
-      mockIpfs
-        .intercept({
-          path: `/api/v0/cat?arg=${hash}`,
-          method: 'POST',
-        })
-        .reply(200, fileContent)
-      mockIpfs
-        .intercept({
-          path: '/api/v0/cat?arg=file_hash',
-          method: 'POST',
-        })
-        .reply(200, fileContent)
-    }
-
-    if (hash) {
-      mockIpfs
-        .intercept({
-          path: '/api/v0/add?cid-version=0&wrap-with-directory=true',
-          method: 'POST',
-        })
-        .reply(200, { Name: '', Hash: hash, Size: '63052' })
-      mockIpfs
-        .intercept({
-          path: `/api/v0/ls?arg=${hash}`,
-          method: 'POST',
-        })
-        .reply(200, {
-          Objects: [{ Links: [{ Hash: hash, Name: 'JSON attachment internalData' }] }],
-        })
-    }
-  })
-}
 export const withIpfsMock = (fileContent: string | object | Buffer, context: MockContext, hash: string) => {
   beforeEach(function () {
     context.originalDispatcher = context.originalDispatcher || getGlobalDispatcher()
@@ -67,16 +23,9 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
 
     const mockIpfs = context.mockAgent.get(`http://${env.IPFS_HOST}:${env.IPFS_PORT}`)
 
-    // mockIpfs
-    //   .intercept({
-    //     path: '/api/v0/add?cid-version=0&wrap-with-directory=true',
-    //     method: 'POST',
-    //   })
-    //   .reply(200, { Name: '', Hash: blobDataCidV0, Size: '63052' })
-
     mockIpfs
       .intercept({
-        path: `/api/v0/ls?arg=${blobDataCidV0}`,
+        path: `/api/v0/ls?arg=${hash}`,
         method: 'POST',
       })
       .reply(200, {
@@ -84,44 +33,30 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
       })
     mockIpfs
       .intercept({
-        path: `/api/v0/ls?arg=QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN`,
+        path: `/api/v0/cat?arg=${hash}`,
+        method: 'POST',
+      })
+      .reply(200, fileContent)
+    mockIpfs
+      .intercept({
+        path: '/api/v0/cat?arg=file_hash',
+        method: 'POST',
+      })
+      .reply(200, fileContent)
+    mockIpfs
+      .intercept({
+        path: '/api/v0/add?cid-version=0&wrap-with-directory=true',
+        method: 'POST',
+      })
+      .reply(200, { Name: '', Hash: hash, Size: '63052' })
+    mockIpfs
+      .intercept({
+        path: `/api/v0/ls?arg=${hash}`,
         method: 'POST',
       })
       .reply(200, {
-        Objects: [{ Links: [{ Hash: 'someHash', Name: 'json' }] }],
+        Objects: [{ Links: [{ Hash: hash, Name: 'json' }] }],
       })
-
-    if (fileContent) {
-      mockIpfs
-        .intercept({
-          path: `/api/v0/cat?arg=${hash}`,
-          method: 'POST',
-        })
-        .reply(200, fileContent)
-      mockIpfs
-        .intercept({
-          path: '/api/v0/cat?arg=file_hash',
-          method: 'POST',
-        })
-        .reply(200, fileContent)
-    }
-
-    if (hash) {
-      mockIpfs
-        .intercept({
-          path: '/api/v0/add?cid-version=0&wrap-with-directory=true',
-          method: 'POST',
-        })
-        .reply(200, { Name: '', Hash: hash, Size: '63052' })
-      mockIpfs
-        .intercept({
-          path: `/api/v0/ls?arg=${hash}`,
-          method: 'POST',
-        })
-        .reply(200, {
-          Objects: [{ Links: [{ Hash: hash, Name: 'json' }] }],
-        })
-    }
   })
 
   afterEach(function () {
@@ -382,7 +317,6 @@ export function mockEnvWithIpfsAsStorage() {
   )
 
   container.registerInstance<Env>(EnvToken, testEnv)
-  // console.log(testEnv)
 }
 export function mockEnvWithS3AsStorage() {
   resetContainer()
@@ -396,7 +330,6 @@ export function mockEnvWithS3AsStorage() {
   )
 
   container.registerInstance<Env>(EnvToken, testEnv)
-  // console.log(testEnv)
 }
 
 export function mockEnvWithAzuriteAsStorage() {
@@ -411,5 +344,4 @@ export function mockEnvWithAzuriteAsStorage() {
   )
 
   container.registerInstance<Env>(EnvToken, testEnv)
-  // console.log(testEnv)
 }
