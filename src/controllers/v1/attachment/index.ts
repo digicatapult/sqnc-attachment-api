@@ -100,13 +100,13 @@ export class AttachmentController extends Controller {
     super()
     this.log = logger.child({ controller: '/attachment' })
     this.storage =
-      env.STORAGE_BACKEND_MODE === 'ipfs'
+      this.env.STORAGE_BACKEND_MODE === 'ipfs'
         ? new Ipfs({
-            host: env.IPFS_HOST,
-            port: env.IPFS_PORT,
+            host: this.env.IPFS_HOST,
+            port: this.env.IPFS_PORT,
             logger,
           })
-        : new StorageClass(env, this.log)
+        : new StorageClass(this.env, this.log)
   }
 
   octetResponse(buffer: Buffer, name: string): Readable {
