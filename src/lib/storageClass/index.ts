@@ -19,16 +19,16 @@ export default class StorageClass {
       env.STORAGE_BACKEND_MODE === 's3' || env.STORAGE_BACKEND_MODE === 'minio'
         ? {
             type: StorageType.S3, // localstack and minio config
-            accessKeyId: env.STORAGE_ACCESS_KEY,
-            secretAccessKey: env.STORAGE_SECRET_KEY,
-            endpoint: `${env.STORAGE_PROTOCOL}://${env.S3_HOST}:${env.S3_PORT}`,
-            region: env.S3_REGION,
-            port: env.S3_PORT,
+            accessKeyId: env.STORAGE_BACKEND_ACCESS_KEY_ID,
+            secretAccessKey: env.STORAGE_BACKEND_SECRET_ACCESS_KEY,
+            endpoint: `${env.STORAGE_BACKEND_PROTOCOL}://${env.STORAGE_BACKEND_HOST}:${env.STORAGE_BACKEND_PORT}`,
+            region: env.STORAGE_BACKEND_S3_REGION,
+            port: env.STORAGE_BACKEND_PORT,
             forcePathStyle: true,
           }
         : {
             type: StorageType.AZURE, // azure config
-            connectionString: `DefaultEndpointsProtocol=${env.STORAGE_PROTOCOL};AccountName=${env.STORAGE_ACCESS_KEY};AccountKey=${env.STORAGE_SECRET_KEY};BlobEndpoint=${env.STORAGE_PROTOCOL}://${env.AZURE_HOST}:${env.AZURE_PORT}/${env.STORAGE_ACCESS_KEY}`,
+            connectionString: `DefaultEndpointsProtocol=${env.STORAGE_BACKEND_PROTOCOL};AccountName=${env.STORAGE_BACKEND_ACCOUNT_NAME};AccountKey=${env.STORAGE_BACKEND_ACCOUNT_SECRET};BlobEndpoint=${env.STORAGE_BACKEND_PROTOCOL}://${env.STORAGE_BACKEND_HOST}:${env.STORAGE_BACKEND_PORT}/${env.STORAGE_BACKEND_ACCOUNT_NAME}`,
           }
     this.storage = new Storage(this.config)
     this.logger.child({ module: 'Storage Class' })
@@ -40,11 +40,11 @@ export default class StorageClass {
     if (buckets.error !== null) {
       throw new Error('Failed to list buckets')
     }
-    const bucketExists = buckets.value?.find((bucket) => bucket === this.env.STORAGE_BUCKET_NAME)
+    const bucketExists = buckets.value?.find((bucket) => bucket === this.env.STORAGE_BACKEND_BUCKET_NAME)
     if (bucketExists) {
       return
     }
-    const createdBucket = await this.storage.createBucket(this.env.STORAGE_BUCKET_NAME)
+    const createdBucket = await this.storage.createBucket(this.env.STORAGE_BACKEND_BUCKET_NAME)
     if (createdBucket.error !== null) {
       throw new Error('Failed to create bucket')
     }
@@ -57,7 +57,7 @@ export default class StorageClass {
     const upload = await this.storage.addFileFromBuffer({
       buffer: fileBuffer,
       targetPath: filename,
-      bucketName: this.env.STORAGE_BUCKET_NAME,
+      bucketName: this.env.STORAGE_BACKEND_BUCKET_NAME,
     })
     if (upload.error !== null) {
       throw new Error('Failed to upload file')
@@ -66,7 +66,7 @@ export default class StorageClass {
 
   async retrieveFileBuffer(filename: string) {
     this.logger.info('Retrieving file from bucket')
-    const stream = await this.storage.getFileAsStream(this.env.STORAGE_BUCKET_NAME, filename)
+    const stream = await this.storage.getFileAsStream(this.env.STORAGE_BACKEND_BUCKET_NAME, filename)
     if (stream.error !== null) {
       throw new NotFound(`Failed to retrieve file with filename: ${filename}`)
     }

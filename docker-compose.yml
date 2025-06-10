@@ -116,16 +116,16 @@ services:
       - IDP_INTERNAL_CLIENT_SECRET=secret
       - CREDENTIALS_FILE_PATH=/app/docker/config/credentials.json
       - AUTHZ_WEBHOOK=http://mock-authz-b:3000
-      - STORAGE_BACKEND_MODE=azure
-      - S3_HOST=localstack
-      - S3_PORT=4566
-      - S3_REGION=eu-west-2
-      - AZURE_HOST=azurite
-      - AZURE_PORT=10000
-      - STORAGE_ACCESS_KEY=devstoreaccount1
-      - STORAGE_SECRET_KEY=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
-      - STORAGE_PROTOCOL=http
-      - STORAGE_BUCKET_NAME=test
+      - STORAGE_BACKEND_MODE=s3
+      - STORAGE_BACKEND_HOST=localstack
+      - STORAGE_BACKEND_PORT=4566
+      - STORAGE_BACKEND_S3_REGION=eu-west-2
+      # - AZURE_HOST=azurite
+      # - AZURE_PORT=10000
+      - STORAGE_ACCESS_KEY=bUSVDwGm5KsvrOAJ5keT
+      - STORAGE_SECRET_KEY=MuFMyporttNkz6m94RcCQuMkMTChvAM4fkc71xC4
+      - STORAGE_BACKEND_PROTOCOL=http
+      - STORAGE_BACKEND_BUCKET_NAME=test
 
   postgres-attachment-api-b:
     image: postgres:17.5-alpine
