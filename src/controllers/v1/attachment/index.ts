@@ -130,9 +130,6 @@ export class AttachmentController extends Controller {
     @Query() integrityHash?: string,
     @Query() id?: UUID[]
   ): Promise<Attachment[]> {
-    if (this.storage instanceof StorageClass) {
-      await this.storage.listBuckets()
-    }
     const query: Where<'attachment'> = [
       updated_since && (['updated_at', '>', parseDateParam(updated_since)] as const),
       integrityHash && (['integrity_hash', '=', integrityHash] as const),
@@ -382,7 +379,7 @@ export class AttachmentController extends Controller {
     if (!Updatedfilename) {
       throw new NotFound('Unable to retrieve attachment filename.')
     }
-    await this.verifyFileIntegrity(buffer, attachment, this.storage)
+    await this.verifyFileIntegrity(buffer, attachment, this.storage, Updatedfilename)
 
     return {
       buffer,
@@ -393,15 +390,16 @@ export class AttachmentController extends Controller {
   private async verifyFileIntegrity(
     buffer: Buffer,
     attachment: AttachmentRow,
-    storage: Ipfs | StorageClass
+    storage: Ipfs | StorageClass,
+    filename: string
   ): Promise<void> {
     let retrievedHash: string
     if (storage instanceof Ipfs) {
-      if (!attachment.filename) {
+      if (!filename) {
         throw new BadRequest('Unable to retrieve attachment filename. Cannot confirm hash integrity.')
       }
       // We can trust the IPFS hash since it's part of the IPFS protocol
-      retrievedHash = await storage.cidHashFromBuffer(buffer, attachment.filename)
+      retrievedHash = await storage.cidHashFromBuffer(buffer, filename)
     } else {
       // For S3/Azure storage, generate hash from retrieved buffer
       retrievedHash = await storage.hashFromBuffer(buffer)

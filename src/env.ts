@@ -55,7 +55,7 @@ export const envSchema = {
   CREDENTIALS_FILE_PATH: envalid.str({
     devDefault: 'docker/config/credentials.json',
   }),
-  STORAGE_BACKEND_MODE: envalid.str({ devDefault: 's3' }), // 's3' or 'azure' or 'ipfs'
+  STORAGE_BACKEND_MODE: envalid.str({ devDefault: 'ipfs' }), // 's3' or 'azure' or 'ipfs'
   S3_HOST: envalid.host({ devDefault: 'localhost' }),
   S3_PORT: envalid.port({ devDefault: 4566 }),
   S3_REGION: envalid.str({ devDefault: 'eu-west-2' }), // unnecessary if we'll never wan to change this

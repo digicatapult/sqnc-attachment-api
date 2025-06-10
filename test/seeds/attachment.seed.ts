@@ -27,6 +27,7 @@ export const attachmentSeed = async () => {
     size: 42,
     created_at: new Date(exampleDate),
     updated_at: new Date(exampleDate),
+    encoding: 'cidv0',
   })
 
   await db.insert('attachment', {
@@ -37,6 +38,7 @@ export const attachmentSeed = async () => {
     size: 42,
     created_at: new Date(exampleDate2),
     updated_at: new Date(exampleDate2),
+    encoding: 'cidv0',
   })
   await db.insert('attachment', {
     id: parametersAttachmentId4,
@@ -46,20 +48,7 @@ export const attachmentSeed = async () => {
     size: null,
     created_at: new Date('2021-05-07T15:48:48.774Z'),
     updated_at: new Date('2021-05-07T15:48:48.774Z'),
-  })
-}
-
-export const additionalAttachmentSeed = async () => {
-  const db = container.resolve(Database)
-
-  await db.insert('attachment', {
-    id: parametersAttachmentId,
-    filename: 'test4.txt',
-    integrity_hash: 'hash1',
-    owner: selfAddress,
-    size: 42,
-    created_at: new Date(exampleDate),
-    updated_at: new Date(exampleDate),
+    encoding: 'cidv0',
   })
 }
 
@@ -74,5 +63,20 @@ export const attachmentSeedWithIncorrectHash = async () => {
     size: 42,
     created_at: new Date(exampleDate),
     updated_at: new Date(exampleDate),
+    encoding: 'cidv0',
+  })
+}
+export const attachmentSeedWithTheSameHash = async (hash: string) => {
+  const db = container.resolve(Database)
+
+  await db.insert('attachment', {
+    id: parametersAttachmentId,
+    filename: 'test4.txt',
+    integrity_hash: hash,
+    owner: selfAddress,
+    size: 42,
+    created_at: new Date(exampleDate),
+    updated_at: new Date(exampleDate),
+    encoding: 'cidv0',
   })
 }

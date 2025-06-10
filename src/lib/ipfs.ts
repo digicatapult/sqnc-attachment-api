@@ -179,8 +179,6 @@ export default class Ipfs {
     if (!root) {
       throw new Error('No root found')
     }
-    console.log('root.cid', root.cid)
-
     return root.cid.toString()
   }
 }
