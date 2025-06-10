@@ -55,7 +55,7 @@ export const envSchema = {
   CREDENTIALS_FILE_PATH: envalid.str({
     devDefault: 'docker/config/credentials.json',
   }),
-  STORAGE_BACKEND_MODE: envalid.str({ devDefault: 'S3' }), // 'S3' or 'AZURE' or 'IPFS'
+  STORAGE_BACKEND_MODE: envalid.str({ devDefault: 'S3' }), // 'S3' (also set to S3 for minio) or 'AZURE' or 'IPFS'
   STORAGE_BACKEND_HOST: envalid.host({ devDefault: 'localhost' }),
   STORAGE_BACKEND_PORT: envalid.port({ devDefault: 4566 }),
   STORAGE_BACKEND_S3_REGION: envalid.str({ devDefault: 'eu-west-2' }),
