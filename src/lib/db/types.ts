@@ -15,6 +15,7 @@ const insertAttachment = z.object({
     z.null(),
   ]),
   integrity_hash: z.string(),
+  encoding: z.enum(['cidv0', 'cidv1', 'sha256']),
 })
 
 const defaultFields = z.object({

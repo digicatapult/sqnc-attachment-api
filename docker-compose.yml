@@ -116,6 +116,15 @@ services:
       - IDP_INTERNAL_CLIENT_SECRET=secret
       - CREDENTIALS_FILE_PATH=/app/docker/config/credentials.json
       - AUTHZ_WEBHOOK=http://mock-authz-b:3000
+      - STORAGE_BACKEND_MODE=S3
+      - STORAGE_BACKEND_HOST=localstack
+      - STORAGE_BACKEND_PORT=4566
+      - STORAGE_BACKEND_S3_REGION=eu-west-2
+      - STORAGE_BACKEND_ACCESS_KEY_ID=bUSVDwGm5KsvrOAJ5keT
+      - STORAGE_BACKEND_SECRET_ACCESS_KEY=MuFMyporttNkz6m94RcCQuMkMTChvAM4fkc71xC4
+      - STORAGE_BACKEND_PROTOCOL=http
+      - STORAGE_BACKEND_BUCKET_NAME=test
+
   postgres-attachment-api-b:
     image: postgres:17.5-alpine
     container_name: postgres-attachment-api-b
@@ -204,6 +213,30 @@ services:
       - 4001:4001
       - 8080:8080
       - 5001:5001
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=password
+    volumes:
+      - ~/minio/data:/data
+    command: server /data --console-address ":9001"
+  localstack:
+    image: localstack/localstack
+    ports:
+      - '4566:4566' # main API
+    environment:
+      - SERVICES=s3
+      - EDGE_PORT=4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=eu-west-2
+    volumes:
+      - localstack_data:/var/lib/localstack
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5
@@ -221,11 +254,24 @@ services:
     build:
       dockerfile: ./Dockerfile
       context: ./docker/authzMock
+    ports:
+      - 3030:3000
     environment:
       - ALLOW=true
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite
+    ports:
+      - 10000:10000
+    volumes:
+      - ./azurite-data:/data
+      - ./azurite-logs:/logs
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --location /data --debug /logs/debug.log
 
 volumes:
   attachment-api-storage:
   identity-storage:
   attachment-api-storage-b:
   identity-storage-b:
+  localstack_data:

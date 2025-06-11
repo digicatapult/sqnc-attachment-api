@@ -23,15 +23,16 @@ import {
   withAuthzMock,
   selfAddress,
   withAttachmentMock,
+  mockEnvWithIpfsAsStorage,
 } from '../helper/mock.js'
 import {
   cleanup,
   parametersAttachmentId,
   attachmentSeed,
   parametersAttachmentId2,
-  additionalAttachmentSeed,
   nonExistentAttachmentId,
   parametersAttachmentId4,
+  attachmentSeedWithTheSameHash,
 } from '../seeds/attachment.seed.js'
 import supertest from 'supertest'
 
@@ -42,13 +43,23 @@ describe('attachment', () => {
   const overSize = 115343360
   const overSizeBlobData = 'a'.repeat(overSize)
   const jsonData = { key: 'it', filename: 'JSON attachment it' }
-  const jsonDataInternal = { integrityHash: 'hash1', ownerAddress: selfAddress }
+  const dataToRetrieveByInternal = { key: 'internalData', filename: 'json' }
+  const blobDataCidV0 = 'QmXrvgzuTm4YnaVGyQmNm9kef2ica6DTGUpmWg8eAVi5dV'
+  const jsonDataCidV0 = 'QmcASNAZW7eWhPVJY948179VKDDJepM7dan3UXZYC2C4Ek'
+  const jsonDataInternalCidV0 = 'QmZMDdpEzC7JduJ3Z5F9w1uXwMAybijiH7ZHaKcZhLQR4D'
+
+  const jsonDataCreateInternal = {
+    integrityHash: jsonDataInternalCidV0,
+    ownerAddress: selfAddress,
+  }
+
   let app: Express
 
   const context: MockContext = {}
   withIdentityMock(context)
   withAttachmentMock(context)
   before(async () => {
+    mockEnvWithIpfsAsStorage()
     app = await createHttpServer()
   })
 
@@ -287,7 +298,7 @@ describe('attachment', () => {
   describe('uploads and retrieves attachment [octet]', () => {
     let octetRes: supertest.Response
 
-    withIpfsMock(blobData, context)
+    withIpfsMock(blobData, context, blobDataCidV0)
 
     beforeEach(async () => {
       octetRes = await postFile(app, '/v1/attachment', Buffer.from(blobData), filename)
@@ -336,7 +347,7 @@ describe('attachment', () => {
   describe('uploads and retrieves attachment [json]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMock(jsonData, context)
+    withIpfsMock(jsonData, context, jsonDataCidV0)
 
     beforeEach(async () => {
       jsonRes = await post(app, '/v1/attachment', jsonData)
@@ -377,7 +388,7 @@ describe('attachment', () => {
   describe('uploads attachment [external]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMock(jsonData, context)
+    withIpfsMock(jsonData, context, jsonDataCidV0)
 
     beforeEach(async () => {
       jsonRes = await postExternal(app, '/v1/attachment', jsonData)
@@ -397,37 +408,34 @@ describe('attachment', () => {
   // this test ensures if we perform an "internal" body request but as an external part it is NOT
   // treated as an internal upload. Instead the file is uploaded as a json file
   describe('uploads and retrieves an attachment [internal body as json]', () => {
+    withIpfsMock(dataToRetrieveByInternal, context, jsonDataInternalCidV0)
     let jsonRes: supertest.Response
-
-    withIpfsMock(jsonDataInternal, context)
-
     beforeEach(async () => {
-      jsonRes = await post(app, '/v1/attachment', jsonDataInternal)
+      jsonRes = await postInternal(app, '/v1/attachment', jsonDataCreateInternal)
     })
 
     it('confirms JSON upload', () => {
       // assert JSON
       expect(jsonRes.status).to.equal(201)
       expect(jsonRes.body).to.contain.keys(['id', 'createdAt'])
-      expect(jsonRes.body.filename).to.equal('json')
+      expect(jsonRes.body.integrityHash).to.equal(jsonDataInternalCidV0)
     })
 
     it('returns JSON attachment', async () => {
       const { id } = jsonRes.body
       const { status, body } = await get(app, `/v1/attachment/${id}`, { accept: 'application/json' })
-
       expect(status).to.equal(200)
-      expect(body).to.contain(jsonDataInternal)
+      expect(body).to.contain(dataToRetrieveByInternal)
     })
   })
 
   describe('uploads and retrieves an attachment [internal]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMock(jsonData, context)
+    withIpfsMock(dataToRetrieveByInternal, context, jsonDataInternalCidV0)
 
     beforeEach(async () => {
-      jsonRes = await postInternal(app, '/v1/attachment', jsonDataInternal)
+      jsonRes = await postInternal(app, '/v1/attachment', jsonDataCreateInternal)
     })
 
     it('returns a valid attachment response', () => {
@@ -436,7 +444,7 @@ describe('attachment', () => {
       expect(jsonRes.body.filename).to.equal(null)
       expect(jsonRes.body.size).to.equal(null)
       expect(jsonRes.body.owner).to.equal('self')
-      expect(jsonRes.body.integrityHash).to.equal('hash1')
+      expect(jsonRes.body.integrityHash).to.equal(jsonDataInternalCidV0)
     })
 
     it('is included in attachment list', async () => {
@@ -448,7 +456,7 @@ describe('attachment', () => {
       expect(body[0]).to.deep.equal({
         id: jsonRes.body.id,
         createdAt: jsonRes.body.createdAt,
-        integrityHash: 'hash1',
+        integrityHash: jsonDataInternalCidV0,
         owner: 'self',
         size: null,
         filename: null,
@@ -458,28 +466,17 @@ describe('attachment', () => {
     it('returns JSON attachment', async () => {
       const { id } = jsonRes.body
       const { status, body } = await get(app, `/v1/attachment/${id}`, { accept: 'application/json' })
-
       expect(status).to.equal(200)
-      expect(body).to.deep.contain(jsonData)
+      expect(body).to.deep.contain(dataToRetrieveByInternal)
     })
 
     it('returns first attachment when fetching by hash', async () => {
-      const res = await get(app, `/v1/attachment/hash1`, { accept: 'application/octet-stream' })
+      await attachmentSeedWithTheSameHash(jsonDataInternalCidV0)
+
+      const res = await get(app, `/v1/attachment/${jsonDataInternalCidV0}`, { accept: 'application/octet-stream' })
       expect(res.status).to.equal(200)
       expect(res.header).to.deep.contain({
         'content-disposition': 'attachment; filename="json"',
-      })
-    })
-
-    it('returns first attachment when multiple attachments share the same hash', async () => {
-      await additionalAttachmentSeed()
-      const { status, header } = await get(app, `/v1/attachment/hash1`, {
-        accept: 'application/octet-stream',
-      })
-
-      expect(status).to.equal(200)
-      expect(header).to.deep.contain({
-        'content-disposition': 'attachment; filename="json"', // make sure we are not getting the 2nd file which would have "filename: 'test4.txt',"
       })
     })
 
@@ -494,7 +491,7 @@ describe('attachment', () => {
   describe('upload [oauth2] then retrieves an attachment [external]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMock(jsonData, context)
+    withIpfsMock(jsonData, context, jsonDataCidV0)
     withAuthzMock(context)
 
     beforeEach(async () => {
@@ -514,17 +511,17 @@ describe('attachment', () => {
   describe('create [internal] then retrieves attachment (401) [external]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMock(jsonData, context)
-    withAuthzMock(context)
+    withIpfsMock(jsonData, context, jsonDataCidV0)
+    withAuthzMock(context, 401)
 
     beforeEach(async () => {
-      const response = await postInternal(app, '/v1/attachment', jsonDataInternal)
+      const response = await postInternal(app, '/v1/attachment', jsonDataCreateInternal)
       const hash = response.body.integrityHash
 
       jsonRes = await getExternal(app, `/v1/attachment/${hash}`)
     })
 
-    it.skip('should error unauthorised', () => {
+    it('should error unauthorised', () => {
       expect(jsonRes.status).to.equal(401)
     })
   })
@@ -532,7 +529,7 @@ describe('attachment', () => {
   describe('upload [oauth2] then retrieves unauthorized attachment (401) [external]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMock(jsonData, context)
+    withIpfsMock(jsonData, context, jsonDataCidV0)
     withAuthzMock(context, 401)
 
     beforeEach(async () => {
@@ -550,7 +547,7 @@ describe('attachment', () => {
   describe('upload [oauth2] then retrieves unauthorized attachment (bad response) [external]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMock(jsonData, context)
+    withIpfsMock(jsonData, context, jsonDataCidV0)
     withAuthzMock(context, 200, {})
 
     beforeEach(async () => {
@@ -568,7 +565,7 @@ describe('attachment', () => {
   describe('upload [oauth2] then retrieves unauthorized attachment (allow: false) [external]', () => {
     let jsonRes: supertest.Response
 
-    withIpfsMock(jsonData, context)
+    withIpfsMock(jsonData, context, jsonDataCidV0)
     withAuthzMock(context, 200, { result: { allow: false } })
 
     beforeEach(async () => {
@@ -792,7 +789,7 @@ describe('attachment', () => {
     beforeEach(async () => {
       await attachmentSeed()
     })
-    withIpfsMock(blobData, context)
+    withIpfsMock(blobData, context, blobDataCidV0)
     withAuthzMock(context, 200, { result: { allow: true } })
 
     it('should retrieve attachment not owned by us  as application/json', async () => {

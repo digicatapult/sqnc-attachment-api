@@ -1,6 +1,9 @@
 import { MockAgent, setGlobalDispatcher, getGlobalDispatcher, Dispatcher } from 'undici'
-import env from '../../src/env.js'
-
+import env, { type Env, envSchema, EnvToken } from '../../src/env.js'
+import { resetContainer } from '../../src/ioc.js'
+import { cleanEnv } from 'envalid'
+import envalid from 'envalid'
+import { container } from 'tsyringe'
 export const selfAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'
 export const notSelfAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
 export const bobAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
@@ -10,7 +13,7 @@ export type MockContext = {
   mockAgent?: MockAgent
 }
 
-export const withIpfsMock = (fileContent: string | object | Buffer, context: MockContext) => {
+export const withIpfsMock = (fileContent: string | object | Buffer, context: MockContext, hash: string) => {
   beforeEach(function () {
     context.originalDispatcher = context.originalDispatcher || getGlobalDispatcher()
     if (!context.mockAgent) {
@@ -22,14 +25,7 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
 
     mockIpfs
       .intercept({
-        path: '/api/v0/add?cid-version=0&wrap-with-directory=true',
-        method: 'POST',
-      })
-      .reply(200, { Name: '', Hash: 'hash1', Size: '63052' })
-
-    mockIpfs
-      .intercept({
-        path: '/api/v0/ls?arg=hash1',
+        path: `/api/v0/ls?arg=${hash}`,
         method: 'POST',
       })
       .reply(200, {
@@ -37,27 +33,30 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
       })
     mockIpfs
       .intercept({
-        path: `/api/v0/ls?arg=QmX5g1GwdB87mDoBTpTgfuWD2VKk8SpMj5WMFFGhhFacHN`,
+        path: `/api/v0/cat?arg=${hash}`,
+        method: 'POST',
+      })
+      .reply(200, fileContent)
+    mockIpfs
+      .intercept({
+        path: '/api/v0/cat?arg=file_hash',
+        method: 'POST',
+      })
+      .reply(200, fileContent)
+    mockIpfs
+      .intercept({
+        path: '/api/v0/add?cid-version=0&wrap-with-directory=true',
+        method: 'POST',
+      })
+      .reply(200, { Name: '', Hash: hash, Size: '63052' })
+    mockIpfs
+      .intercept({
+        path: `/api/v0/ls?arg=${hash}`,
         method: 'POST',
       })
       .reply(200, {
-        Objects: [{ Links: [{ Hash: 'someHash', Name: 'json' }] }],
+        Objects: [{ Links: [{ Hash: hash, Name: 'json' }] }],
       })
-
-    if (fileContent) {
-      mockIpfs
-        .intercept({
-          path: `/api/v0/cat?arg=someHash`,
-          method: 'POST',
-        })
-        .reply(200, fileContent)
-      mockIpfs
-        .intercept({
-          path: '/api/v0/cat?arg=file_hash',
-          method: 'POST',
-        })
-        .reply(200, fileContent)
-    }
   })
 
   afterEach(function () {
@@ -304,4 +303,55 @@ export const withAttachmentMock = (context: MockContext) => {
       delete context.mockAgent
     }
   })
+}
+
+export function mockEnvWithIpfsAsStorage() {
+  resetContainer()
+
+  const testEnv: Env = cleanEnv(
+    {
+      ...process.env,
+      STORAGE_BACKEND_MODE: 'ipfs',
+    },
+    { ...envSchema, STORAGE_BACKEND_MODE: envalid.str({ default: 'ipfs', devDefault: 'ipfs' }) }
+  )
+
+  container.registerInstance<Env>(EnvToken, testEnv)
+}
+export function mockEnvWithS3AsStorage() {
+  resetContainer()
+
+  const testEnv: Env = cleanEnv(
+    {
+      ...process.env,
+      STORAGE_BACKEND_MODE: 'S3',
+    },
+    {
+      ...envSchema,
+      STORAGE_BACKEND_MODE: envalid.str({ default: 'S3', devDefault: 'S3' }),
+      STORAGE_BACKEND_HOST: envalid.host({ default: 'localhost', devDefault: 'localhost' }),
+      STORAGE_BACKEND_PORT: envalid.port({ default: 4566, devDefault: 4566 }),
+    }
+  )
+
+  container.registerInstance<Env>(EnvToken, testEnv)
+}
+
+export function mockEnvWithAzuriteAsStorage() {
+  resetContainer()
+
+  const testEnv: Env = cleanEnv(
+    {
+      ...process.env,
+      STORAGE_BACKEND_MODE: 'AZURE',
+    },
+    {
+      ...envSchema,
+      STORAGE_BACKEND_MODE: envalid.str({ default: 'AZURE', devDefault: 'AZURE' }),
+      STORAGE_BACKEND_HOST: envalid.host({ default: 'localhost', devDefault: 'localhost' }),
+      STORAGE_BACKEND_PORT: envalid.port({ default: 10000, devDefault: 10000 }),
+    }
+  )
+
+  container.registerInstance<Env>(EnvToken, testEnv)
 }

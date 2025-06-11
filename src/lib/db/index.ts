@@ -1,35 +1,16 @@
-import knex from 'knex'
-import { container, singleton } from 'tsyringe'
+import { type Knex } from 'knex'
+import { inject, singleton } from 'tsyringe'
 import { z } from 'zod'
 
-import { Env, EnvToken } from '../../env.js'
 import Zod, { ColumnsByType, IDatabase, Models, Order, TABLE, Update, Where, tablesList } from './types.js'
 import { reduceWhere } from './util.js'
-
-const env = container.resolve<Env>(EnvToken)
-const clientSingleton = knex({
-  client: 'pg',
-  connection: {
-    host: env.DB_HOST,
-    database: env.DB_NAME,
-    user: env.DB_USERNAME,
-    password: env.DB_PASSWORD,
-    port: env.DB_PORT,
-  },
-  pool: {
-    min: 2,
-    max: 10,
-  },
-  migrations: {
-    tableName: 'migrations',
-  },
-})
+import { KnexToken } from './knexClient.js'
 
 @singleton()
 export default class Database {
   private db: IDatabase
 
-  constructor(private client = clientSingleton) {
+  constructor(@inject(KnexToken) private client: Knex) {
     const models: IDatabase = tablesList.reduce((acc, name) => {
       return {
         [name]: () => this.client(name),
@@ -101,5 +82,3 @@ export default class Database {
     })
   }
 }
-
-container.register(Database, { useValue: new Database() })
