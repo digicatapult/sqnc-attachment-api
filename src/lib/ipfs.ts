@@ -1,5 +1,5 @@
 import type { Logger } from 'pino'
-import { singleton } from 'tsyringe'
+import { inject, injectable } from 'tsyringe'
 import { z } from 'zod'
 
 import { serviceState } from './service-watcher/statusPoll.js'
@@ -8,6 +8,8 @@ import { importer } from 'ipfs-unixfs-importer'
 import { MemoryBlockstore } from 'blockstore-core'
 import { fixedSize } from 'ipfs-unixfs-importer/chunker'
 import all from 'it-all'
+import { Env, EnvToken, type IPFSEnv } from '../env.js'
+import { LoggerToken } from './logger.js'
 
 interface FilestoreResponse {
   Name: string
@@ -47,24 +49,25 @@ const peersValidator = z.object({
     )
     .nullable(),
 })
-
-@singleton()
+@injectable()
 export default class Ipfs {
   private addUrl: string
   private dirUrl: (dirHash: string) => string
   private fileUrl: (fileHash: string) => string
-  private logger: Logger
   private versionURL: string
   private peersURL: string
 
-  constructor({ host, port, logger }: { host: string; port: number; logger: Logger }) {
-    this.addUrl = `http://${host}:${port}/api/v0/add?cid-version=0&wrap-with-directory=true`
-    this.dirUrl = (dirHash) => `http://${host}:${port}/api/v0/ls?arg=${dirHash}`
-    this.fileUrl = (fileHash) => `http://${host}:${port}/api/v0/cat?arg=${fileHash}`
+  constructor(
+    @inject(EnvToken) private env: IPFSEnv,
+    @inject(LoggerToken) private logger: Logger
+  ) {
+    this.addUrl = `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/add?cid-version=0&wrap-with-directory=true`
+    this.dirUrl = (dirHash) => `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/ls?arg=${dirHash}`
+    this.fileUrl = (fileHash) => `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/cat?arg=${fileHash}`
 
-    this.logger = logger.child({ module: 'ipfs' })
-    this.versionURL = `http://${host}:${port}/api/v0/version`
-    this.peersURL = `http://${host}:${port}/api/v0/swarm/peers`
+    this.versionURL = `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/version`
+    this.peersURL = `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/swarm/peers`
+    // this.logger.child({ module: 'ipfs' })
   }
 
   async addFile({ blob, filename }: MetadataFile): Promise<string> {
@@ -160,7 +163,7 @@ export default class Ipfs {
       }
     }
   }
-  async cidHashFromBuffer(buffer: Buffer, filename: string) {
+  async hashFromBuffer(buffer: Buffer, filename: string) {
     const file = {
       content: buffer,
       path: filename, // need filename to produce correct cid
@@ -200,4 +203,8 @@ const findHash = (filestoreResponse: FilestoreResponse[]) => {
   } else {
     throw new HttpResponse({ code: 500, message: 'ipfs failed to make directory' })
   }
+}
+
+export function isIpfsEnv(env: Env): env is IPFSEnv {
+  return env.STORAGE_BACKEND_MODE === 'IPFS'
 }

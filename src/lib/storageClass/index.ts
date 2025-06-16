@@ -1,35 +1,43 @@
 import { type Logger } from 'pino'
-import { inject, singleton } from 'tsyringe'
+import { inject, injectable } from 'tsyringe'
 import { LoggerToken } from '../logger.js'
-import { StorageType, Storage } from '@tweedegolf/storage-abstraction'
-import { type Env, EnvToken } from '../../env.js'
+import { StorageType, Storage, StorageAdapterConfig } from '@tweedegolf/storage-abstraction'
+import { AzureEnv, type Env, EnvToken, S3Env } from '../../env.js'
 import { ResultObjectStream } from '@tweedegolf/storage-abstraction/dist/types/result.js'
 import { NotFound } from '../error-handler/index.js'
 import { createHash } from 'crypto'
 
-@singleton()
+export const StorageToken = Symbol('StorageToken')
+@injectable()
 export default class StorageClass {
   private storage: Storage
-  private config
+  private config: StorageAdapterConfig | undefined
   constructor(
-    @inject(EnvToken) private env: Env,
+    @inject(EnvToken) private env: S3Env | AzureEnv,
     @inject(LoggerToken) private logger: Logger
   ) {
-    this.config =
-      env.STORAGE_BACKEND_MODE === 'S3'
-        ? {
-            type: StorageType.S3, // localstack and minio config
-            accessKeyId: env.STORAGE_BACKEND_ACCESS_KEY_ID,
-            secretAccessKey: env.STORAGE_BACKEND_SECRET_ACCESS_KEY,
-            endpoint: `${env.STORAGE_BACKEND_PROTOCOL}://${env.STORAGE_BACKEND_HOST}:${env.STORAGE_BACKEND_PORT}`,
-            region: env.STORAGE_BACKEND_S3_REGION,
-            port: env.STORAGE_BACKEND_PORT,
-            forcePathStyle: true,
-          }
-        : {
-            type: StorageType.AZURE, // azure config
-            connectionString: `DefaultEndpointsProtocol=${env.STORAGE_BACKEND_PROTOCOL};AccountName=${env.STORAGE_BACKEND_ACCOUNT_NAME};AccountKey=${env.STORAGE_BACKEND_ACCOUNT_SECRET};BlobEndpoint=${env.STORAGE_BACKEND_PROTOCOL}://${env.STORAGE_BACKEND_HOST}:${env.STORAGE_BACKEND_PORT}/${env.STORAGE_BACKEND_ACCOUNT_NAME}`,
-          }
+    if (!isS3Env(env) && !isAzureEnv(env)) {
+      throw new Error('Invalid storage mode')
+    }
+    if (isS3Env(env)) {
+      this.config = {
+        type: StorageType.S3, // localstack and minio config
+        accessKeyId: env.STORAGE_BACKEND_ACCESS_KEY_ID,
+        secretAccessKey: env.STORAGE_BACKEND_SECRET_ACCESS_KEY,
+        endpoint: `${env.STORAGE_BACKEND_PROTOCOL}://${env.STORAGE_BACKEND_HOST}:${env.STORAGE_BACKEND_PORT}`,
+        region: env.STORAGE_BACKEND_S3_REGION,
+        port: env.STORAGE_BACKEND_PORT,
+        forcePathStyle: true,
+      }
+    } else {
+      this.config = {
+        type: StorageType.AZURE, // azure config
+        connectionString: `DefaultEndpointsProtocol=${env.STORAGE_BACKEND_PROTOCOL};AccountName=${env.STORAGE_BACKEND_ACCOUNT_NAME};AccountKey=${env.STORAGE_BACKEND_ACCOUNT_SECRET};BlobEndpoint=${env.STORAGE_BACKEND_PROTOCOL}://${env.STORAGE_BACKEND_HOST}:${env.STORAGE_BACKEND_PORT}/${env.STORAGE_BACKEND_ACCOUNT_NAME}`,
+      }
+    }
+    if (this.config === undefined) {
+      throw new Error('Storage config not found')
+    }
     this.storage = new Storage(this.config)
     this.logger.child({ module: 'Storage Class' })
   }
@@ -40,17 +48,19 @@ export default class StorageClass {
     if (buckets.error !== null) {
       throw new Error('Failed to list buckets')
     }
+
     const bucketExists = buckets.value?.find((bucket) => bucket === this.env.STORAGE_BACKEND_BUCKET_NAME)
     if (bucketExists) {
       return
     }
+
     const createdBucket = await this.storage.createBucket(this.env.STORAGE_BACKEND_BUCKET_NAME)
     if (createdBucket.error !== null) {
       throw new Error('Failed to create bucket')
     }
   }
 
-  async uploadFile(fileBuffer: Buffer, filename: string) {
+  async addFile(fileBuffer: Buffer, filename: string) {
     this.logger.info('Uploading file to bucket')
     await this.createBucketIfDoesNotExist()
 
@@ -64,11 +74,12 @@ export default class StorageClass {
     }
   }
 
-  async retrieveFileBuffer(filename: string) {
+  async getFile(hash: string) {
     this.logger.info('Retrieving file from bucket')
-    const stream = await this.storage.getFileAsStream(this.env.STORAGE_BACKEND_BUCKET_NAME, filename)
+
+    const stream = await this.storage.getFileAsStream(this.env.STORAGE_BACKEND_BUCKET_NAME, hash)
     if (stream.error !== null) {
-      throw new NotFound(`Failed to retrieve file with filename: ${filename}`)
+      throw new NotFound(`Failed to retrieve file with filename: ${hash}`)
     }
 
     const buffer = await this.resultObjectStreamToBuffer(stream)
@@ -82,7 +93,8 @@ export default class StorageClass {
   }
 
   // generate hash to use as a file name for S3/Azure storage
-  async hashFromBuffer(buffer: Buffer) {
+  async hashFromBuffer(buffer: Buffer, filename?: string) {
+    this.logger.info('Generating hash from buffer', filename) // use the filename somehow differently
     return createHash('sha256').update(buffer).digest('hex')
   }
 
@@ -111,4 +123,13 @@ export default class StorageClass {
       })
     })
   }
+}
+
+// Type guard functions
+export function isS3Env(env: Env): env is S3Env {
+  return env.STORAGE_BACKEND_MODE === 'S3'
+}
+
+export function isAzureEnv(env: Env): env is AzureEnv {
+  return env.STORAGE_BACKEND_MODE === 'AZURE'
 }

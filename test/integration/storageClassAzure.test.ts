@@ -15,9 +15,8 @@ import {
 } from '../seeds/attachment.seed.js'
 import StorageClass from '../../src/lib/storageClass/index.js'
 import { logger } from '../../src/lib/logger.js'
-import { EnvToken } from '../../src/env.js'
+import { AzureEnv, EnvToken } from '../../src/env.js'
 import { container } from 'tsyringe'
-import { type Env } from '../../src/env.js'
 // need to change/re-register an env for the storage class
 
 describe('attachment From Azurite', () => {
@@ -78,9 +77,9 @@ describe('attachment From Azurite', () => {
   describe('Azurite retrieve file with the wrong hash should fail integrity check', () => {
     const wrongHash: string = 'wrongHash'
     beforeEach(async () => {
-      const env = container.resolve<Env>(EnvToken) // resolve test env
+      const env = container.resolve<AzureEnv>(EnvToken) // resolve test env
       const storage = new StorageClass(env, logger)
-      await storage.uploadFile(Buffer.from(blobData), wrongHash)
+      await storage.addFile(Buffer.from(blobData), wrongHash)
 
       await attachmentSeedWithIncorrectHash()
     })

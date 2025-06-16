@@ -1,9 +1,23 @@
 import { MockAgent, setGlobalDispatcher, getGlobalDispatcher, Dispatcher } from 'undici'
-import env, { type Env, envSchema, EnvToken } from '../../src/env.js'
-import { resetContainer } from '../../src/ioc.js'
+import env, {
+  AzureEnv,
+  azureSchema,
+  baseSchema,
+  EnvToken,
+  IPFSEnv,
+  ipfsSchema,
+  S3Env,
+  s3Schema,
+} from '../../src/env.js'
 import { cleanEnv } from 'envalid'
 import envalid from 'envalid'
 import { container } from 'tsyringe'
+import Ipfs, { isIpfsEnv } from '../../src/lib/ipfs.js'
+import StorageClass, { StorageToken } from '../../src/lib/storageClass/index.js'
+import { Logger } from 'pino'
+import { logger, LoggerToken } from '../../src/lib/logger.js'
+import { clientSingleton, KnexToken } from '../../src/lib/db/knexClient.js'
+import { Knex } from 'knex'
 export const selfAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'
 export const notSelfAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
 export const bobAddress = '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
@@ -19,6 +33,9 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
     if (!context.mockAgent) {
       context.mockAgent = new MockAgent()
       setGlobalDispatcher(context.mockAgent)
+    }
+    if (!isIpfsEnv(env)) {
+      return
     }
 
     const mockIpfs = context.mockAgent.get(`http://${env.IPFS_HOST}:${env.IPFS_PORT}`)
@@ -74,6 +91,9 @@ export const withIpfsMockError = (context: MockContext) => {
     if (!context.mockAgent) {
       context.mockAgent = new MockAgent()
       setGlobalDispatcher(context.mockAgent)
+    }
+    if (!isIpfsEnv(env)) {
+      return
     }
 
     const mockIpfs = context.mockAgent.get(`http://${env.IPFS_HOST}:${env.IPFS_PORT}`)
@@ -233,31 +253,32 @@ export const withHealthyDeps = (context: MockContext) => {
         status: 'ok',
         version: '1.0.0',
       })
+    if (isIpfsEnv(env)) {
+      const mockIpfs = context.mockAgent.get(`http://${env.IPFS_HOST}:${env.IPFS_PORT}`)
 
-    const mockIpfs = context.mockAgent.get(`http://${env.IPFS_HOST}:${env.IPFS_PORT}`)
+      mockIpfs
+        .intercept({
+          path: '/api/v0/version',
+          method: 'POST',
+        })
+        .reply(200, {
+          Version: '2.0.0',
+        })
 
-    mockIpfs
-      .intercept({
-        path: '/api/v0/version',
-        method: 'POST',
-      })
-      .reply(200, {
-        Version: '2.0.0',
-      })
-
-    mockIpfs
-      .intercept({
-        path: '/api/v0/swarm/peers',
-        method: 'POST',
-      })
-      .reply(200, {
-        Peers: [
-          {
-            Addr: 'abc',
-            Peer: '123',
-          },
-        ],
-      })
+      mockIpfs
+        .intercept({
+          path: '/api/v0/swarm/peers',
+          method: 'POST',
+        })
+        .reply(200, {
+          Peers: [
+            {
+              Addr: 'abc',
+              Peer: '123',
+            },
+          ],
+        })
+    }
   })
 
   afterEach(function () {
@@ -306,52 +327,64 @@ export const withAttachmentMock = (context: MockContext) => {
 }
 
 export function mockEnvWithIpfsAsStorage() {
-  resetContainer()
+  container.clearInstances()
 
-  const testEnv: Env = cleanEnv(
+  const testEnv: IPFSEnv = cleanEnv(
     {
       ...process.env,
-      STORAGE_BACKEND_MODE: 'ipfs',
+      STORAGE_BACKEND_MODE: 'IPFS',
     },
-    { ...envSchema, STORAGE_BACKEND_MODE: envalid.str({ default: 'ipfs', devDefault: 'ipfs' }) }
-  )
+    { ...baseSchema, ...ipfsSchema, STORAGE_BACKEND_MODE: envalid.str({ default: 'IPFS', devDefault: 'IPFS' }) }
+  ) as IPFSEnv
 
-  container.registerInstance<Env>(EnvToken, testEnv)
+  container.registerInstance<IPFSEnv>(EnvToken, testEnv)
+  container.register<Logger>(LoggerToken, { useValue: logger })
+  container.register<Knex>(KnexToken, { useValue: clientSingleton })
+  container.registerSingleton(StorageToken, Ipfs)
 }
-export function mockEnvWithS3AsStorage() {
-  resetContainer()
 
-  const testEnv: Env = cleanEnv(
+export function mockEnvWithS3AsStorage() {
+  container.clearInstances()
+
+  const testEnv: S3Env = cleanEnv(
     {
       ...process.env,
       STORAGE_BACKEND_MODE: 'S3',
     },
     {
-      ...envSchema,
+      ...baseSchema,
+      ...s3Schema,
       STORAGE_BACKEND_MODE: envalid.str({ default: 'S3', devDefault: 'S3' }),
       STORAGE_BACKEND_HOST: envalid.host({ default: 'localhost', devDefault: 'localhost' }),
       STORAGE_BACKEND_PORT: envalid.port({ default: 4566, devDefault: 4566 }),
     }
-  )
+  ) as S3Env
 
-  container.registerInstance<Env>(EnvToken, testEnv)
+  container.registerInstance<S3Env>(EnvToken, testEnv)
+  container.register<Logger>(LoggerToken, { useValue: logger })
+  container.register<Knex>(KnexToken, { useValue: clientSingleton })
+  container.registerSingleton(StorageToken, StorageClass)
 }
 
 export function mockEnvWithAzuriteAsStorage() {
-  resetContainer()
+  container.clearInstances()
 
-  const testEnv: Env = cleanEnv(
+  const testEnv: AzureEnv = cleanEnv(
     {
       ...process.env,
       STORAGE_BACKEND_MODE: 'AZURE',
     },
     {
-      ...envSchema,
+      ...baseSchema,
+      ...azureSchema,
       STORAGE_BACKEND_MODE: envalid.str({ default: 'AZURE', devDefault: 'AZURE' }),
       STORAGE_BACKEND_HOST: envalid.host({ default: 'localhost', devDefault: 'localhost' }),
       STORAGE_BACKEND_PORT: envalid.port({ default: 10000, devDefault: 10000 }),
     }
-  )
+  ) as AzureEnv
 
-  container.registerInstance<Env>(EnvToken, testEnv)
+  container.registerInstance<AzureEnv>(EnvToken, testEnv)
+  container.register<Logger>(LoggerToken, { useValue: logger })
+  container.register<Knex>(KnexToken, { useValue: clientSingleton })
+  container.registerSingleton(StorageToken, StorageClass)
 }

@@ -14,7 +14,7 @@ import {
 } from '../seeds/attachment.seed.js'
 import StorageClass from '../../src/lib/storageClass/index.js'
 import { logger } from '../../src/lib/logger.js'
-import { type Env, EnvToken } from '../../src/env.js'
+import { EnvToken, S3Env } from '../../src/env.js'
 import { container } from 'tsyringe'
 
 // need to change/re-register an env for the storage class - think we did this in matchmaker api
@@ -77,9 +77,9 @@ describe('attachment From S3', () => {
   describe('S3 retrieve file with the wrong hash should fail integrity check', () => {
     const wrongHash: string = 'wrongHash'
     beforeEach(async () => {
-      const env = container.resolve<Env>(EnvToken) // resolve test env
+      const env = container.resolve<S3Env>(EnvToken) // resolve test env
       const storage = new StorageClass(env, logger)
-      await storage.uploadFile(Buffer.from(blobData), wrongHash)
+      await storage.addFile(Buffer.from(blobData), wrongHash)
 
       await attachmentSeedWithIncorrectHash()
     })

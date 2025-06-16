@@ -2,12 +2,11 @@ import { describe, it } from 'mocha'
 
 import { expect } from 'chai'
 import sinon from 'sinon'
-import StorageClass from '../index'
 import { container } from 'tsyringe'
 import { Readable } from 'stream'
-import { resetContainer } from '../../../ioc'
 import { NotFound } from '../../error-handler'
-
+import { mockEnvWithS3AsStorage } from '../../../../test/helper/mock'
+import StorageClass, { StorageToken } from '../index'
 describe('StorageClass', () => {
   let storageClass: StorageClass
   let listBucketsStub: sinon.SinonStub
@@ -18,9 +17,9 @@ describe('StorageClass', () => {
   // should I be using a mockEnv here or is it fine if I just use normal env?
 
   beforeEach(() => {
-    resetContainer()
+    mockEnvWithS3AsStorage() // should this be recreated in a mock within the unit tests?
     sinon.restore()
-    storageClass = container.resolve(StorageClass)
+    storageClass = container.resolve(StorageToken)
     listBucketsStub = sinon.stub(storageClass['storage'], 'listBuckets')
     createBucketStub = sinon.stub(storageClass['storage'], 'createBucket')
     addFileFromBufferStub = sinon.stub(storageClass['storage'], 'addFileFromBuffer')
@@ -105,7 +104,7 @@ describe('StorageClass', () => {
     })
   })
 
-  describe('uploadFile', () => {
+  describe('addFile', () => {
     const mockFileBuffer = Buffer.from('test content')
     const mockFilename = 'test.txt'
 
@@ -123,7 +122,7 @@ describe('StorageClass', () => {
         value: ['test'],
       })
 
-      await storageClass.uploadFile(mockFileBuffer, mockFilename)
+      await storageClass.addFile(mockFileBuffer, mockFilename)
       expect(addFileFromBufferStub.callCount).to.be.equal(1)
       expect(
         addFileFromBufferStub.calledWith({
@@ -148,7 +147,7 @@ describe('StorageClass', () => {
       })
 
       try {
-        await storageClass.uploadFile(mockFileBuffer, mockFilename)
+        await storageClass.addFile(mockFileBuffer, mockFilename)
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error).to.be.instanceOf(Error)
@@ -171,7 +170,7 @@ describe('StorageClass', () => {
       createBucketStub.resolves(mockCreateResult)
       addFileFromBufferStub.resolves(mockUploadResult)
 
-      await storageClass.uploadFile(mockFileBuffer, mockFilename)
+      await storageClass.addFile(mockFileBuffer, mockFilename)
       expect(createBucketStub.calledWith('test')).to.be.equal(true)
       expect(
         addFileFromBufferStub.calledWith({
@@ -203,7 +202,7 @@ describe('StorageClass', () => {
         value: mockStream,
       })
 
-      const result = await storageClass.retrieveFileBuffer(mockFilename)
+      const result = await storageClass.getFile(mockFilename)
       expect(result).to.deep.equal(mockBuffer)
       expect(getFileAsStreamStub.calledWith('test', mockFilename)).to.be.equal(true)
     })
@@ -220,7 +219,7 @@ describe('StorageClass', () => {
       })
 
       try {
-        await storageClass.retrieveFileBuffer(mockFilename)
+        await storageClass.getFile(mockFilename)
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error).to.be.instanceOf(Error)
@@ -244,7 +243,7 @@ describe('StorageClass', () => {
       })
 
       try {
-        await storageClass.retrieveFileBuffer(mockFilename)
+        await storageClass.getFile(mockFilename)
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error).to.be.instanceOf(Error)

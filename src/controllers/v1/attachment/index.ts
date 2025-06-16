@@ -19,7 +19,7 @@ import {
 import { Logger } from 'pino'
 import express from 'express'
 import { Readable } from 'node:stream'
-
+import { StorageToken } from '../../../lib/storageClass/index.js'
 import { logger } from '../../../lib/logger.js'
 import Database from '../../../lib/db/index.js'
 import {
@@ -31,7 +31,6 @@ import {
 import { BadRequest, Forbidden, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
-import { type Env, EnvToken } from '../../../env.js'
 import { parseDateParam } from '../../../lib/utils/queryParams.js'
 import { AttachmentRow, Where } from '../../../lib/db/types.js'
 import Identity from '../../../lib/identity.js'
@@ -84,13 +83,11 @@ const externalJwtParser = z.object({
 @Tags('attachment')
 export class AttachmentController extends Controller {
   log: Logger
-  storage: Ipfs | StorageClass
-
   //keep a log of looked up identities for this request to make sure they are consistently applied
   memoisedIdentities: Map<string, string> = new Map()
 
   constructor(
-    @inject(EnvToken) private env: Env,
+    @inject(StorageToken) private storage: Ipfs | StorageClass,
 
     private db: Database,
     private identity: Identity,
@@ -99,14 +96,6 @@ export class AttachmentController extends Controller {
   ) {
     super()
     this.log = logger.child({ controller: '/attachment' })
-    this.storage =
-      this.env.STORAGE_BACKEND_MODE === 'ipfs'
-        ? new Ipfs({
-            host: this.env.IPFS_HOST,
-            port: this.env.IPFS_PORT,
-            logger,
-          })
-        : new StorageClass(this.env, this.log)
   }
 
   octetResponse(buffer: Buffer, name: string): Readable {
@@ -236,7 +225,7 @@ export class AttachmentController extends Controller {
     }
     if (this.storage instanceof StorageClass) {
       integrityHash = await this.storage.hashFromBuffer(fileBuffer)
-      await this.storage.uploadFile(fileBuffer, `${integrityHash}`)
+      await this.storage.addFile(fileBuffer, `${integrityHash}`)
       self = await this.identity.getMemberBySelf()
       this.rememberThem(self)
     }
@@ -371,7 +360,7 @@ export class AttachmentController extends Controller {
     }
     // Get from S3/Azure storage
     if (this.storage instanceof StorageClass) {
-      buffer = await this.storage.retrieveFileBuffer(attachment.integrity_hash)
+      buffer = await this.storage.getFile(attachment.integrity_hash)
     }
     if (!buffer) {
       throw new NotFound('Unable to retrieve attachment.')
@@ -393,17 +382,10 @@ export class AttachmentController extends Controller {
     storage: Ipfs | StorageClass,
     filename: string
   ): Promise<void> {
-    let retrievedHash: string
-    if (storage instanceof Ipfs) {
-      if (!filename) {
-        throw new BadRequest('Unable to retrieve attachment filename. Cannot confirm hash integrity.')
-      }
-      // We can trust the IPFS hash since it's part of the IPFS protocol
-      retrievedHash = await storage.cidHashFromBuffer(buffer, filename)
-    } else {
-      // For S3/Azure storage, generate hash from retrieved buffer
-      retrievedHash = await storage.hashFromBuffer(buffer)
+    if (!filename) {
+      throw new BadRequest('Unable to retrieve attachment filename. Cannot confirm hash integrity.')
     }
+    const retrievedHash = await storage.hashFromBuffer(buffer, filename)
 
     if (retrievedHash !== attachment.integrity_hash) {
       this.log.error('File integrity check failed for attachment %s', attachment.id)
