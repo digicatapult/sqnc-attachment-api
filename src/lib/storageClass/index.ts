@@ -7,7 +7,7 @@ import { ResultObjectStream } from '@tweedegolf/storage-abstraction/dist/types/r
 import { NotFound } from '../error-handler/index.js'
 import { createHash } from 'crypto'
 import { serviceState } from '../service-watcher/statusPoll.js'
-
+import { HashType } from '../db/types.js'
 export const StorageToken = Symbol('StorageToken')
 @injectable()
 export default class StorageClass {
@@ -61,7 +61,10 @@ export default class StorageClass {
     }
   }
 
-  async addFile({ buffer, filename }: { buffer: Buffer; filename?: string }) {
+  async addFile({ buffer, filename }: { buffer: Buffer; filename?: string }): Promise<{
+    integrityHash: string
+    hashType: HashType
+  }> {
     this.logger.info('Uploading file to bucket', filename) // should the filename be handled differnt
     await this.createBucketIfDoesNotExist()
     const integrityHash = await this.hashFromBuffer(buffer)

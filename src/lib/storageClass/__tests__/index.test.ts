@@ -7,7 +7,7 @@ import { Readable } from 'stream'
 import { NotFound } from '../../error-handler'
 import { mockEnvWithS3AsStorage } from '../../../../test/helper/mock'
 import StorageClass, { StorageToken } from '../index'
-describe('StorageClass', () => {
+describe.only('StorageClass', () => {
   let storageClass: StorageClass
   let listBucketsStub: sinon.SinonStub
   let createBucketStub: sinon.SinonStub
@@ -135,7 +135,7 @@ describe('StorageClass', () => {
           bucketName: 'test',
         })
       ).to.be.equal(true)
-      expect(res).to.be.equal(hashFromMockFileBuffer)
+      expect(res).to.deep.equal({ integrityHash: hashFromMockFileBuffer, hashType: 'sha256' })
     })
 
     it('should throw error when upload fails', async () => {

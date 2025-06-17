@@ -10,6 +10,7 @@ import { fixedSize } from 'ipfs-unixfs-importer/chunker'
 import all from 'it-all'
 import { Env, EnvToken, type IPFSEnv } from '../env.js'
 import { LoggerToken } from './logger.js'
+import { HashType } from './db/types.js'
 
 interface FilestoreResponse {
   Name: string
@@ -67,10 +68,10 @@ export default class Ipfs {
 
     this.versionURL = `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/version`
     this.peersURL = `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/swarm/peers`
-    // this.logger.child({ module: 'ipfs' })
+    this.logger.child({ module: 'ipfs' })
   }
 
-  async addFile({ buffer, filename }: MetadataFile): Promise<{ integrityHash: string; hashType: string }> {
+  async addFile({ buffer, filename }: MetadataFile): Promise<{ integrityHash: string; hashType: HashType }> {
     this.logger.debug('Uploading file %s', filename)
     const form = new FormData()
     const blob = new Blob([buffer])

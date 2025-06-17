@@ -32,7 +32,7 @@ import { BadRequest, Forbidden, NotFound, UnknownError } from '../../../lib/erro
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
 import { parseDateParam } from '../../../lib/utils/queryParams.js'
-import { AttachmentRow, Where } from '../../../lib/db/types.js'
+import { AttachmentRow, HashType, Where } from '../../../lib/db/types.js'
 import Identity from '../../../lib/identity.js'
 import { inject, injectable } from 'tsyringe'
 import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
@@ -400,7 +400,7 @@ export class AttachmentController extends Controller {
     this.memoisedIdentities.set(address, alias)
   }
 
-  private identifyHash(input: string): 'cidv0' | 'cidv1' | 'sha256' {
+  private identifyHash(input: string): HashType {
     try {
       this.log.debug('Trying to parse hash as CID for %s', input)
       const cid = CID.parse(input)

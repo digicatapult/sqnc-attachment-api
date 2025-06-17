@@ -3,6 +3,8 @@ import { z } from 'zod'
 
 export const tablesList = ['attachment'] as const
 
+const hashType = z.enum(['cidv0', 'cidv1', 'sha256'])
+export type HashType = z.infer<typeof hashType>
 const insertAttachment = z.object({
   owner: z.string(),
   filename: z.union([z.string(), z.null()]),
@@ -15,7 +17,7 @@ const insertAttachment = z.object({
     z.null(),
   ]),
   integrity_hash: z.string(),
-  encoding: z.enum(['cidv0', 'cidv1', 'sha256']),
+  encoding: hashType,
 })
 
 const defaultFields = z.object({
