@@ -209,26 +209,15 @@ export class AttachmentController extends Controller {
       throw new BadRequest('Invalid body for internal attachment creation')
     }
   }
-  private async uploadFile(fileBuffer: Buffer, filename: string) {
+  private async uploadFile(buffer: Buffer, filename: string) {
     let integrityHash: string | null = null
     let self: {
       address: string
       alias: string
     } | null = null
-    if (this.storage instanceof Ipfs) {
-      const fileBlob = new Blob([fileBuffer])
-      ;[integrityHash, self] = await Promise.all([
-        this.storage.addFile.apply(this.storage, [{ blob: fileBlob, filename }]),
-        this.identity.getMemberBySelf.apply(this.identity),
-      ])
-      this.rememberThem(self)
-    }
-    if (this.storage instanceof StorageClass) {
-      integrityHash = await this.storage.hashFromBuffer(fileBuffer)
-      await this.storage.addFile(fileBuffer, `${integrityHash}`)
-      self = await this.identity.getMemberBySelf()
-      this.rememberThem(self)
-    }
+    integrityHash = await this.storage.addFile({ buffer, filename })
+    self = await this.identity.getMemberBySelf()
+    this.rememberThem(self)
     return { integrityHash, self }
   }
   @Get('/{idOrHash}')

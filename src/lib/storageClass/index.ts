@@ -61,18 +61,20 @@ export default class StorageClass {
     }
   }
 
-  async addFile(fileBuffer: Buffer, filename: string) {
-    this.logger.info('Uploading file to bucket')
+  async addFile({ buffer, filename }: { buffer: Buffer; filename?: string }) {
+    this.logger.info('Uploading file to bucket', filename) // should the filename be handled differnt
     await this.createBucketIfDoesNotExist()
+    const integrityHash = await this.hashFromBuffer(buffer)
 
     const upload = await this.storage.addFileFromBuffer({
-      buffer: fileBuffer,
-      targetPath: filename,
+      buffer: buffer,
+      targetPath: integrityHash,
       bucketName: this.env.STORAGE_BACKEND_BUCKET_NAME,
     })
     if (upload.error !== null) {
       throw new Error('Failed to upload file')
     }
+    return integrityHash
   }
 
   async getFile(hash: string) {

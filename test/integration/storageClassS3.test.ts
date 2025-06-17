@@ -79,7 +79,7 @@ describe('attachment From S3', () => {
     beforeEach(async () => {
       const env = container.resolve<S3Env>(EnvToken) // resolve test env
       const storage = new StorageClass(env, logger)
-      await storage.addFile(Buffer.from(blobData), wrongHash)
+      await storage.addFile({ buffer: Buffer.from(blobData), filename: wrongHash })
 
       await attachmentSeedWithIncorrectHash()
     })

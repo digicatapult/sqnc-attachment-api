@@ -107,6 +107,10 @@ describe('StorageClass', () => {
   describe('addFile', () => {
     const mockFileBuffer = Buffer.from('test content')
     const mockFilename = 'test.txt'
+    let hashFromMockFileBuffer: string
+    before(async () => {
+      hashFromMockFileBuffer = await storageClass.hashFromBuffer(mockFileBuffer)
+    })
 
     it('should successfully upload file', async () => {
       const mockUploadResult = {
@@ -121,16 +125,17 @@ describe('StorageClass', () => {
         error: null,
         value: ['test'],
       })
-
-      await storageClass.addFile(mockFileBuffer, mockFilename)
+      // const hashFromMockFileBuffer = await storageClass.hashFromBuffer(mockFileBuffer)
+      const res = await storageClass.addFile({ buffer: mockFileBuffer, filename: mockFilename })
       expect(addFileFromBufferStub.callCount).to.be.equal(1)
       expect(
         addFileFromBufferStub.calledWith({
           buffer: mockFileBuffer,
-          targetPath: mockFilename,
+          targetPath: hashFromMockFileBuffer,
           bucketName: 'test',
         })
       ).to.be.equal(true)
+      expect(res).to.be.equal(hashFromMockFileBuffer)
     })
 
     it('should throw error when upload fails', async () => {
@@ -147,7 +152,7 @@ describe('StorageClass', () => {
       })
 
       try {
-        await storageClass.addFile(mockFileBuffer, mockFilename)
+        await storageClass.addFile({ buffer: mockFileBuffer, filename: mockFilename })
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error).to.be.instanceOf(Error)
@@ -169,13 +174,14 @@ describe('StorageClass', () => {
       listBucketsStub.resolves(mockBuckets)
       createBucketStub.resolves(mockCreateResult)
       addFileFromBufferStub.resolves(mockUploadResult)
+      // const hashFromMockFileBuffer = await storageClass.hashFromBuffer(mockFileBuffer)
 
-      await storageClass.addFile(mockFileBuffer, mockFilename)
+      await storageClass.addFile({ buffer: mockFileBuffer, filename: mockFilename })
       expect(createBucketStub.calledWith('test')).to.be.equal(true)
       expect(
         addFileFromBufferStub.calledWith({
           buffer: mockFileBuffer,
-          targetPath: mockFilename,
+          targetPath: hashFromMockFileBuffer,
           bucketName: 'test',
         })
       ).to.be.equal(true)

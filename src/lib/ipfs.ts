@@ -18,7 +18,7 @@ interface FilestoreResponse {
 }
 
 export interface MetadataFile {
-  blob: Blob
+  buffer: Buffer
   filename: string
 }
 
@@ -70,9 +70,11 @@ export default class Ipfs {
     // this.logger.child({ module: 'ipfs' })
   }
 
-  async addFile({ blob, filename }: MetadataFile): Promise<string> {
+  async addFile({ buffer, filename }: MetadataFile): Promise<string> {
     this.logger.debug('Uploading file %s', filename)
     const form = new FormData()
+    const blob = new Blob([buffer])
+
     form.append('file', blob, filename)
     const res = await fetch(this.addUrl, {
       method: 'POST',
@@ -96,7 +98,7 @@ export default class Ipfs {
     return hash
   }
 
-  async getFile(hash: string): Promise<MetadataFile> {
+  async getFile(hash: string) {
     const dirUrl = this.dirUrl(hash)
     const dirRes = await fetch(dirUrl, { method: 'POST' })
     if (!dirRes.ok || !dirRes.body) {

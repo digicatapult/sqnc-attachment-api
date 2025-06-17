@@ -79,7 +79,7 @@ describe('attachment From Azurite', () => {
     beforeEach(async () => {
       const env = container.resolve<AzureEnv>(EnvToken) // resolve test env
       const storage = new StorageClass(env, logger)
-      await storage.addFile(Buffer.from(blobData), wrongHash)
+      await storage.addFile({ buffer: Buffer.from(blobData), filename: wrongHash })
 
       await attachmentSeedWithIncorrectHash()
     })
