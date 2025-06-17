@@ -119,7 +119,9 @@ export default class Ipfs {
     const fileRes = await fetch(fileUrl, { method: 'POST' })
     if (!fileRes.ok) throw new Error(`Error fetching file from IPFS (${fileRes.status}): ${await fileRes.text()}`)
 
-    return { blob: await fileRes.blob(), filename }
+    const blob = await fileRes.blob()
+    const buffer = Buffer.from(await blob.arrayBuffer())
+    return { buffer, filename }
   }
 
   getStatus = async () => {

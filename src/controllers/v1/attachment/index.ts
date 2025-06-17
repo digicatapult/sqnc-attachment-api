@@ -299,7 +299,6 @@ export class AttachmentController extends Controller {
     attachment: AttachmentRow,
     self: { address: string }
   ): Promise<{ buffer: Buffer<ArrayBuffer>; filename: string }> {
-    let buffer: Buffer<ArrayBuffer> | null = null
     let Updatedfilename: string | null = attachment.filename
     // If the attachment is from another owner, get it from peer
     if (attachment.owner !== self.address) {
@@ -324,33 +323,12 @@ export class AttachmentController extends Controller {
       return { buffer: blobBuffer, filename: filename || 'external' }
     }
 
-    // Get from IPFS
-    if (this.storage instanceof Ipfs) {
-      const { blob, filename: ipfsFilename } = await this.storage.getFile(attachment.integrity_hash)
-      buffer = Buffer.from(await blob.arrayBuffer())
+    const { buffer, filename } = await this.storage.getFile(attachment.integrity_hash)
+    if (attachment.filename === null && filename) {
+      await this.db.update('attachment', { id: attachment.id }, { filename: filename })
+      Updatedfilename = filename
+    }
 
-      // Update attachment metadata if needed
-      if (attachment.size === null || attachment.filename === null) {
-        try {
-          await this.db.update(
-            'attachment',
-            { id: attachment.id },
-            {
-              filename: ipfsFilename,
-              size: blob.size,
-            }
-          )
-          Updatedfilename = ipfsFilename
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'unknown'
-          this.log.warn('Error updating attachment size: %s', message)
-        }
-      }
-    }
-    // Get from S3/Azure storage
-    if (this.storage instanceof StorageClass) {
-      buffer = await this.storage.getFile(attachment.integrity_hash)
-    }
     if (!buffer) {
       throw new NotFound('Unable to retrieve attachment.')
     }

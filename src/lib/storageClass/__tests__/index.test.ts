@@ -209,7 +209,7 @@ describe('StorageClass', () => {
       })
 
       const result = await storageClass.getFile(mockFilename)
-      expect(result).to.deep.equal(mockBuffer)
+      expect(result).to.deep.equal({ buffer: mockBuffer, filename: mockFilename })
       expect(getFileAsStreamStub.calledWith('test', mockFilename)).to.be.equal(true)
     })
 

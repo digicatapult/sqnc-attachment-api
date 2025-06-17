@@ -86,7 +86,7 @@ export default class StorageClass {
     }
 
     const buffer = await this.resultObjectStreamToBuffer(stream)
-    return buffer
+    return { buffer, filename: hash }
   }
 
   async listBuckets() {
