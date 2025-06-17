@@ -74,7 +74,7 @@ export default class StorageClass {
     if (upload.error !== null) {
       throw new Error('Failed to upload file')
     }
-    return integrityHash
+    return { integrityHash, hashType: 'sha256' }
   }
 
   async getFile(hash: string) {

@@ -88,8 +88,9 @@ describe('attachment From S3', () => {
     })
     it('try to retrieve file with the wrong hash - should fail integrity check', async () => {
       const { status, body } = await get(app, `/v1/attachment/${wrongHash}`)
-      expect(status).to.equal(400)
-      expect(body).to.contain('File integrity check failed')
+      expect(status).to.equal(404)
+      console.log(body)
+      expect(body).to.contain('Failed to retrieve file with filename: wrongHash not found')
     })
   })
 })

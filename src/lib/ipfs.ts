@@ -70,7 +70,7 @@ export default class Ipfs {
     // this.logger.child({ module: 'ipfs' })
   }
 
-  async addFile({ buffer, filename }: MetadataFile): Promise<string> {
+  async addFile({ buffer, filename }: MetadataFile): Promise<{ integrityHash: string; hashType: string }> {
     this.logger.debug('Uploading file %s', filename)
     const form = new FormData()
     const blob = new Blob([buffer])
@@ -95,7 +95,7 @@ export default class Ipfs {
 
     const hash = findHash(json)
     this.logger.debug('Upload of file %s succeeded. Hash is %s', filename, hash)
-    return hash
+    return { integrityHash: hash, hashType: 'cidv0' }
   }
 
   async getFile(hash: string) {

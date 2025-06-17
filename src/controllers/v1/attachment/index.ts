@@ -165,17 +165,14 @@ export class AttachmentController extends Controller {
     const fileBuffer = file?.buffer ? Buffer.from(file?.buffer) : Buffer.from(JSON.stringify(req.body))
     const fileBlob = new Blob([fileBuffer])
 
-    const { integrityHash, self } = await this.uploadFile(fileBuffer, filename)
+    const { integrityHash, self, hashType } = await this.uploadFile(fileBuffer, filename)
 
-    if (!integrityHash || !self) {
-      throw new BadRequest('Failed to generate integrity hash or get self identity')
-    }
     const [res] = await this.db.insert('attachment', {
       filename,
       owner: self.address,
       integrity_hash: integrityHash,
       size: fileBlob.size,
-      encoding: this.identifyHash(integrityHash),
+      encoding: hashType,
     })
 
     return this.transformAttachment(res)
@@ -210,15 +207,14 @@ export class AttachmentController extends Controller {
     }
   }
   private async uploadFile(buffer: Buffer, filename: string) {
-    let integrityHash: string | null = null
     let self: {
       address: string
       alias: string
     } | null = null
-    integrityHash = await this.storage.addFile({ buffer, filename })
+    const { integrityHash, hashType } = await this.storage.addFile({ buffer, filename })
     self = await this.identity.getMemberBySelf()
     this.rememberThem(self)
-    return { integrityHash, self }
+    return { integrityHash, self, hashType }
   }
   @Get('/{idOrHash}')
   @Security('oauth2')
@@ -299,7 +295,7 @@ export class AttachmentController extends Controller {
     attachment: AttachmentRow,
     self: { address: string }
   ): Promise<{ buffer: Buffer<ArrayBuffer>; filename: string }> {
-    let Updatedfilename: string | null = attachment.filename
+    let updatedFilename: string | null = attachment.filename
     // If the attachment is from another owner, get it from peer
     if (attachment.owner !== self.address) {
       const { blobBuffer, filename } = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
@@ -314,7 +310,7 @@ export class AttachmentController extends Controller {
               encoding: hashType,
             }
           )
-          Updatedfilename = filename
+          updatedFilename = filename
         } catch (err) {
           const message = err instanceof Error ? err.message : 'unknown'
           this.log.warn('Error updating attachment filename: %s', message)
@@ -326,20 +322,20 @@ export class AttachmentController extends Controller {
     const { buffer, filename } = await this.storage.getFile(attachment.integrity_hash)
     if (attachment.filename === null && filename) {
       await this.db.update('attachment', { id: attachment.id }, { filename: filename })
-      Updatedfilename = filename
+      updatedFilename = filename
     }
 
     if (!buffer) {
       throw new NotFound('Unable to retrieve attachment.')
     }
-    if (!Updatedfilename) {
+    if (!updatedFilename) {
       throw new NotFound('Unable to retrieve attachment filename.')
     }
-    await this.verifyFileIntegrity(buffer, attachment, this.storage, Updatedfilename)
+    await this.verifyFileIntegrity(buffer, attachment, this.storage, updatedFilename)
 
     return {
       buffer,
-      filename: Updatedfilename,
+      filename: updatedFilename,
     }
   }
 
