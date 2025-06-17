@@ -6,6 +6,7 @@ import { AzureEnv, type Env, EnvToken, S3Env } from '../../env.js'
 import { ResultObjectStream } from '@tweedegolf/storage-abstraction/dist/types/result.js'
 import { NotFound } from '../error-handler/index.js'
 import { createHash } from 'crypto'
+import { serviceState } from '../service-watcher/statusPoll.js'
 
 export const StorageToken = Symbol('StorageToken')
 @injectable()
@@ -122,6 +123,37 @@ export default class StorageClass {
         reject(new Error(`Stream read failed: ${err.message}`))
       })
     })
+  }
+
+  getStatus = async () => {
+    try {
+      const buckets = await this.storage.listBuckets()
+      if (buckets.error !== null) {
+        logStatusError(this.logger, buckets.error)
+        return {
+          status: serviceState.DOWN,
+          detail: { message: `Error getting status from storage ${buckets.error}` },
+        }
+      }
+    } catch (e) {
+      logStatusError(this.logger, e)
+      return {
+        status: serviceState.DOWN,
+        detail: { message: `Error getting status from storage ${e}` },
+      }
+    }
+    return {
+      status: serviceState.UP,
+      detail: { version: '1.0.0', peerCount: 0 }, // do we include this? or rewrite the status type?
+    }
+  }
+}
+const logStatusError = (logger: Logger, details: unknown) => {
+  if (details instanceof Error) {
+    logger.error('Error getting status from storage. Message: %s', details.message)
+    logger.debug('Error getting status from storage. Stack: %j', details.stack)
+  } else {
+    logger.error('Error getting status from storage: %s', JSON.stringify(details))
   }
 }
 

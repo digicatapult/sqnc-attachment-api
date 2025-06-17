@@ -61,12 +61,12 @@ export default class Ipfs {
     @inject(EnvToken) private env: IPFSEnv,
     @inject(LoggerToken) private logger: Logger
   ) {
-    this.addUrl = `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/add?cid-version=0&wrap-with-directory=true`
-    this.dirUrl = (dirHash) => `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/ls?arg=${dirHash}`
-    this.fileUrl = (fileHash) => `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/cat?arg=${fileHash}`
+    this.addUrl = `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/add?cid-version=0&wrap-with-directory=true`
+    this.dirUrl = (dirHash) => `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/ls?arg=${dirHash}`
+    this.fileUrl = (fileHash) => `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/cat?arg=${fileHash}`
 
-    this.versionURL = `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/version`
-    this.peersURL = `http://${env.IPFS_HOST}:${env.IPFS_PORT}/api/v0/swarm/peers`
+    this.versionURL = `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/version`
+    this.peersURL = `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/swarm/peers`
     // this.logger.child({ module: 'ipfs' })
   }
 
