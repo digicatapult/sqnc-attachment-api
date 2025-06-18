@@ -88,7 +88,7 @@ const externalJwtParser = z.object({
 @Tags('attachment')
 export class AttachmentController extends Controller {
   log: Logger
-  //keep a log of looked up identities for this request to make sure they are consistently applied
+  // keep a log of looked up identities for this request to make sure they are consistently applied
   memoisedIdentities: Map<string, string> = new Map()
 
   constructor(
