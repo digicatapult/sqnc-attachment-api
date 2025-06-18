@@ -8,7 +8,7 @@ import { NotFound } from '../../error-handler'
 import { mockEnvWithS3AsStorage } from '../../../../test/helper/mock'
 import StorageClass, { StorageToken } from '../index'
 import { sha256HashFromBuffer } from '../../utils/hashing'
-describe.only('StorageClass', () => {
+describe('StorageClass', () => {
   let storageClass: StorageClass
   let listBucketsStub: sinon.SinonStub
   let createBucketStub: sinon.SinonStub
