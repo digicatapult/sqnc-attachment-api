@@ -14,7 +14,6 @@ import {
 describe('health checks', function () {
   let app: Express
   const context: MockContext = {}
-  mockEnvWithIpfsAsStorage()
 
   withHealthyDeps(context)
   describe('with ipfs as storage', function () {

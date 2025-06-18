@@ -362,6 +362,8 @@ export function mockEnvWithS3AsStorage() {
       STORAGE_BACKEND_MODE: envalid.str({ default: 'S3', devDefault: 'S3' }),
       STORAGE_BACKEND_HOST: envalid.host({ default: 'localhost', devDefault: 'localhost' }),
       STORAGE_BACKEND_PORT: envalid.port({ default: 9000, devDefault: 9000 }),
+      STORAGE_BACKEND_ACCESS_KEY: envalid.str({ default: 'minio', devDefault: 'minio' }),
+      STORAGE_BACKEND_SECRET_KEY: envalid.str({ default: 'password', devDefault: 'password' }),
     }
   ) as S3Env
 
