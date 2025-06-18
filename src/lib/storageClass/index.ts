@@ -42,12 +42,14 @@ export default class StorageClass {
     }
     this.storage = new Storage(this.config)
     this.logger.child({ module: 'Storage Class' })
+    this.logger.info('Storage config: %j', this.config)
   }
 
   async createBucketIfDoesNotExist() {
     this.logger.info('Creating bucket if it does not exist')
     const buckets = await this.storage.listBuckets()
     if (buckets.error !== null) {
+      this.logger.error('Failed to list buckets: %j', buckets.error)
       throw new Error('Failed to list buckets')
     }
 
@@ -58,6 +60,7 @@ export default class StorageClass {
 
     const createdBucket = await this.storage.createBucket(this.env.STORAGE_BACKEND_BUCKET_NAME)
     if (createdBucket.error !== null) {
+      this.logger.error('Failed to create bucket: %j', createdBucket.error)
       throw new Error('Failed to create bucket')
     }
   }
@@ -76,6 +79,7 @@ export default class StorageClass {
       bucketName: this.env.STORAGE_BACKEND_BUCKET_NAME,
     })
     if (upload.error !== null) {
+      this.logger.error('Failed to upload file: %j', upload.error)
       throw new Error('Failed to upload file')
     }
     return { integrityHash, hashType: 'sha256' }
@@ -86,6 +90,7 @@ export default class StorageClass {
 
     const stream = await this.storage.getFileAsStream(this.env.STORAGE_BACKEND_BUCKET_NAME, hash)
     if (stream.error !== null) {
+      this.logger.error('Failed to retrieve file: %j', stream.error)
       throw new NotFound(`Failed to retrieve file with filename: ${hash}`)
     }
 
