@@ -7,6 +7,7 @@ import { Readable } from 'stream'
 import { NotFound } from '../../error-handler'
 import { mockEnvWithS3AsStorage } from '../../../../test/helper/mock'
 import StorageClass, { StorageToken } from '../index'
+import { sha256HashFromBuffer } from '../../utils/hashing'
 describe.only('StorageClass', () => {
   let storageClass: StorageClass
   let listBucketsStub: sinon.SinonStub
@@ -109,7 +110,7 @@ describe.only('StorageClass', () => {
     const mockFilename = 'test.txt'
     let hashFromMockFileBuffer: string
     before(async () => {
-      hashFromMockFileBuffer = await storageClass.hashFromBuffer(mockFileBuffer)
+      hashFromMockFileBuffer = sha256HashFromBuffer(mockFileBuffer)
     })
 
     it('should successfully upload file', async () => {

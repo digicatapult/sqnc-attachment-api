@@ -7,7 +7,7 @@ export async function up(knex: Knex): Promise<void> {
         useNative: true,
         enumName: 'attachment_encoding_type',
       })
-      .nullable()
+      .defaultTo('cidv0')
   })
 }
 

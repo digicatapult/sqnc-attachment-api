@@ -5,9 +5,10 @@ import { StorageType, Storage, StorageAdapterConfig } from '@tweedegolf/storage-
 import { AzureEnv, type Env, EnvToken, S3Env } from '../../env.js'
 import { ResultObjectStream } from '@tweedegolf/storage-abstraction/dist/types/result.js'
 import { NotFound } from '../error-handler/index.js'
-import { createHash } from 'crypto'
+
 import { serviceState } from '../service-watcher/statusPoll.js'
 import { HashType } from '../db/types.js'
+import { sha256HashFromBuffer } from '../utils/hashing.js'
 export const StorageToken = Symbol('StorageToken')
 @injectable()
 export default class StorageClass {
@@ -67,7 +68,7 @@ export default class StorageClass {
   }> {
     this.logger.info('Uploading file to bucket', filename) // should the filename be handled differnt
     await this.createBucketIfDoesNotExist()
-    const integrityHash = await this.hashFromBuffer(buffer)
+    const integrityHash = sha256HashFromBuffer(buffer)
 
     const upload = await this.storage.addFileFromBuffer({
       buffer: buffer,
@@ -96,12 +97,6 @@ export default class StorageClass {
     this.logger.info('Listing buckets')
     const buckets = await this.storage.listBuckets()
     return buckets
-  }
-
-  // generate hash to use as a file name for S3/Azure storage
-  async hashFromBuffer(buffer: Buffer, filename?: string) {
-    this.logger.info('Generating hash from buffer', filename) // use the filename somehow differently
-    return createHash('sha256').update(buffer).digest('hex')
   }
 
   async resultObjectStreamToBuffer(result: ResultObjectStream): Promise<Buffer> {

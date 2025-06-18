@@ -19,6 +19,10 @@ import {
 import { Logger } from 'pino'
 import express from 'express'
 import { Readable } from 'node:stream'
+import { importer } from 'ipfs-unixfs-importer'
+import { MemoryBlockstore } from 'blockstore-core'
+import { fixedSize } from 'ipfs-unixfs-importer/chunker'
+import all from 'it-all'
 import { StorageToken } from '../../../lib/storageClass/index.js'
 import { logger } from '../../../lib/logger.js'
 import Database from '../../../lib/db/index.js'
@@ -41,6 +45,7 @@ import Authz from '../../../lib/authz.js'
 import { ExternalAttachmentService } from '../../../lib/externalAttachment/index.js'
 import StorageClass from '../../../lib/storageClass/index.js'
 import { CID } from 'multiformats/cid'
+import { sha256HashFromBuffer } from '../../../lib/utils/hashing.js'
 
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
@@ -331,7 +336,7 @@ export class AttachmentController extends Controller {
     if (!updatedFilename) {
       throw new NotFound('Unable to retrieve attachment filename.')
     }
-    await this.verifyFileIntegrity(buffer, attachment, this.storage, updatedFilename)
+    await this.verifyFileIntegrity(buffer, attachment, updatedFilename)
 
     return {
       buffer,
@@ -339,16 +344,12 @@ export class AttachmentController extends Controller {
     }
   }
 
-  private async verifyFileIntegrity(
-    buffer: Buffer,
-    attachment: AttachmentRow,
-    storage: Ipfs | StorageClass,
-    filename: string
-  ): Promise<void> {
+  private async verifyFileIntegrity(buffer: Buffer, attachment: AttachmentRow, filename: string): Promise<void> {
     if (!filename) {
       throw new BadRequest('Unable to retrieve attachment filename. Cannot confirm hash integrity.')
     }
-    const retrievedHash = await storage.hashFromBuffer(buffer, filename)
+    const encoding = this.identifyHash(attachment.integrity_hash)
+    const retrievedHash = await this.hashFromBuffer(buffer, filename, encoding)
 
     if (retrievedHash !== attachment.integrity_hash) {
       this.log.error('File integrity check failed for attachment %s', attachment.id)
@@ -416,5 +417,31 @@ export class AttachmentController extends Controller {
     }
 
     throw new BadRequest('Invalid hash type')
+  }
+  private async hashFromBuffer(buffer: Buffer, filename: string, encoding: HashType) {
+    if (encoding === 'cidv0') {
+      this.log.debug('Generating CIDv0 hash from buffer')
+      const file = {
+        content: buffer,
+        path: filename, // need filename to produce correct cid
+      }
+      const blockstore = new MemoryBlockstore()
+
+      const entries = await all(
+        importer([file], blockstore, {
+          cidVersion: 0,
+          rawLeaves: false,
+          wrapWithDirectory: true,
+          chunker: fixedSize({ chunkSize: 262144 }), // 256 KB chunks
+        })
+      )
+      const root = entries.at(-1)
+      if (!root) {
+        throw new Error('No root found')
+      }
+      return root.cid.toString()
+    }
+    this.log.debug('Generating SHA-256 hash from buffer')
+    return sha256HashFromBuffer(buffer)
   }
 }
