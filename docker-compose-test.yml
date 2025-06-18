@@ -34,18 +34,6 @@ services:
     volumes:
       - ./minio/data:/data
     command: server /data --console-address ":9001"
-  localstack:
-    image: localstack/localstack
-    ports:
-      - '4566:4566' # main API
-    environment:
-      - SERVICES=s3
-      - EDGE_PORT=4566
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_REGION=eu-west-2
-    volumes:
-      - localstack_data:/var/lib/localstack
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
     container_name: azurite

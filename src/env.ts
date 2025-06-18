@@ -114,7 +114,7 @@ export const baseSchema = {
   CREDENTIALS_FILE_PATH: envalid.str({
     devDefault: 'docker/config/credentials.json',
   }),
-  STORAGE_BACKEND_MODE: envalid.str({ devDefault: 'IPFS', choices: ['S3', 'AZURE', 'IPFS'] }), // 'S3' (also set to S3 for minio) or 'AZURE' or 'IPFS'
+  STORAGE_BACKEND_MODE: envalid.str({ devDefault: 'S3', choices: ['S3', 'AZURE', 'IPFS'] }), // 'S3' (also set to S3 for minio) or 'AZURE' or 'IPFS'
 }
 
 export const ipfsSchema = {
@@ -124,10 +124,10 @@ export const ipfsSchema = {
 
 export const s3Schema = {
   STORAGE_BACKEND_HOST: envalid.host({ devDefault: 'localhost' }),
-  STORAGE_BACKEND_PORT: envalid.port({ default: 4566 }),
+  STORAGE_BACKEND_PORT: envalid.port({ default: 9000 }),
   STORAGE_BACKEND_S3_REGION: envalid.str({ devDefault: 'eu-west-2' }),
-  STORAGE_BACKEND_ACCESS_KEY_ID: envalid.str({ devDefault: 'bUSVDwGm5KsvrOAJ5keT' }),
-  STORAGE_BACKEND_SECRET_ACCESS_KEY: envalid.str({ devDefault: 'MuFMyporttNkz6m94RcCQuMkMTChvAM4fkc71xC4' }),
+  STORAGE_BACKEND_ACCESS_KEY_ID: envalid.str({ devDefault: 'minio' }),
+  STORAGE_BACKEND_SECRET_ACCESS_KEY: envalid.str({ devDefault: 'password' }),
   STORAGE_BACKEND_PROTOCOL: envalid.str({ default: 'http', devDefault: 'http' }),
   STORAGE_BACKEND_BUCKET_NAME: envalid.str({ devDefault: 'test' }),
 }

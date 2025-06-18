@@ -3,6 +3,7 @@ import env, {
   AzureEnv,
   azureSchema,
   baseSchema,
+  Env,
   EnvToken,
   IPFSEnv,
   ipfsSchema,
@@ -34,6 +35,7 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
       context.mockAgent = new MockAgent()
       setGlobalDispatcher(context.mockAgent)
     }
+    const env: Env = container.resolve(EnvToken)
     if (!isIpfsEnv(env)) {
       return
     }
@@ -92,6 +94,7 @@ export const withIpfsMockError = (context: MockContext) => {
       context.mockAgent = new MockAgent()
       setGlobalDispatcher(context.mockAgent)
     }
+    const env: Env = container.resolve(EnvToken)
     if (!isIpfsEnv(env)) {
       return
     }
@@ -241,6 +244,7 @@ export const withHealthyDeps = (context: MockContext) => {
       context.mockAgent = new MockAgent()
       setGlobalDispatcher(context.mockAgent)
     }
+    const env: Env = container.resolve(EnvToken)
 
     const mockIdentity = context.mockAgent.get(`http://${env.IDENTITY_SERVICE_HOST}:${env.IDENTITY_SERVICE_PORT}`)
 
@@ -253,6 +257,7 @@ export const withHealthyDeps = (context: MockContext) => {
         status: 'ok',
         version: '1.0.0',
       })
+
     if (isIpfsEnv(env)) {
       const mockIpfs = context.mockAgent.get(`http://${env.IPFS_HOST}:${env.IPFS_PORT}`)
 
@@ -356,7 +361,7 @@ export function mockEnvWithS3AsStorage() {
       ...s3Schema,
       STORAGE_BACKEND_MODE: envalid.str({ default: 'S3', devDefault: 'S3' }),
       STORAGE_BACKEND_HOST: envalid.host({ default: 'localhost', devDefault: 'localhost' }),
-      STORAGE_BACKEND_PORT: envalid.port({ default: 4566, devDefault: 4566 }),
+      STORAGE_BACKEND_PORT: envalid.port({ default: 9000, devDefault: 9000 }),
     }
   ) as S3Env
 

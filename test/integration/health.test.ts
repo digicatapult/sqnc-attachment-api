@@ -11,13 +11,16 @@ import {
   mockEnvWithS3AsStorage,
   withHealthyDeps,
 } from '../helper/mock.js'
-
+import { container } from 'tsyringe'
+import { Env, EnvToken } from '../../src/env.js'
 describe('health checks', function () {
   let app: Express
   const context: MockContext = {}
+  mockEnvWithIpfsAsStorage()
 
   withHealthyDeps(context)
-
+  const env: Env = container.resolve(EnvToken)
+  console.log(env.STORAGE_BACKEND_MODE)
   describe('with ipfs as storage', function () {
     beforeEach(async () => {
       mockEnvWithIpfsAsStorage()

@@ -66,7 +66,7 @@ export default class StorageClass {
     integrityHash: string
     hashType: HashType
   }> {
-    this.logger.info('Uploading file to bucket', filename) // should the filename be handled differnt
+    this.logger.debug('Uploading file %s', filename)
     await this.createBucketIfDoesNotExist()
     const integrityHash = sha256HashFromBuffer(buffer)
 

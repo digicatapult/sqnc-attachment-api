@@ -1,6 +1,6 @@
 import { singleton } from 'tsyringe'
 
-import startStorageStatus from './ipfsStatus.js'
+import startStorageStatus from './storageStatus.js'
 import { buildCombinedHandler, SERVICE_STATE, Status } from './statusPoll.js'
 import startIdentityStatus from './identityStatus.js'
 
