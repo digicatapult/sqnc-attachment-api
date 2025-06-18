@@ -18,7 +18,7 @@ jobs:
     with:
       docker_compose_file: './docker-compose-test.yml'
       npm_build_command: 'npm run build:tsoa'
-      pre_test_command: 'mkdir -p /tmp/minio-data && sudo chown -R 1001:1001 /tmp/minio-data && npm run db:migrate'
+      pre_test_command: 'npm run db:migrate'
       tests: '["test:integration"]'
   build-docker:
     uses: digicatapult/shared-workflows/.github/workflows/build-docker.yml@main

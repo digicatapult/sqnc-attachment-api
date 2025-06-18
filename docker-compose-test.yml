@@ -31,8 +31,8 @@ services:
     environment:
       - MINIO_ROOT_USER=minio
       - MINIO_ROOT_PASSWORD=password
-    volumes:
-      - /tmp/minio-data:/data
+    tmpfs:
+      - /data
     command: server /data --console-address ":9001"
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
@@ -43,3 +43,4 @@ services:
 
 volumes:
   attachment-api-storage:
+  minio-data:
