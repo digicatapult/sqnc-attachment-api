@@ -32,18 +32,14 @@ services:
       - MINIO_ROOT_USER=minio
       - MINIO_ROOT_PASSWORD=password
     volumes:
-      - ./minio/data:/data
+      - /tmp/minio-data:/data
     command: server /data --console-address ":9001"
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
     container_name: azurite
     ports:
       - 10000:10000
-    volumes:
-      - ./azurite-data:/data
-      - ./azurite-logs:/logs
-    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --location /data --debug /logs/debug.log
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000
 
 volumes:
   attachment-api-storage:
-  localstack_data:

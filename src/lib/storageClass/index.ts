@@ -49,7 +49,7 @@ export default class StorageClass {
     this.logger.info('Creating bucket if it does not exist')
     const buckets = await this.storage.listBuckets()
     if (buckets.error !== null) {
-      this.logger.error('Failed to list buckets: %j', buckets.error)
+      this.logger.error('Failed to list buckets: %j', buckets)
       throw new Error('Failed to list buckets')
     }
 
