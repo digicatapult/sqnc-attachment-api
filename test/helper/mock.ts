@@ -36,6 +36,7 @@ export const withIpfsMock = (fileContent: string | object | Buffer, context: Moc
       setGlobalDispatcher(context.mockAgent)
     }
     const env: Env = container.resolve(EnvToken)
+
     if (!isIpfsEnv(env)) {
       return
     }
@@ -95,6 +96,7 @@ export const withIpfsMockError = (context: MockContext) => {
       setGlobalDispatcher(context.mockAgent)
     }
     const env: Env = container.resolve(EnvToken)
+
     if (!isIpfsEnv(env)) {
       return
     }

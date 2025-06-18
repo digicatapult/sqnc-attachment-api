@@ -14,14 +14,12 @@ import {
 describe('health checks', function () {
   let app: Express
   const context: MockContext = {}
-
+  mockEnvWithIpfsAsStorage()
   withHealthyDeps(context)
   describe('with ipfs as storage', function () {
     beforeEach(async () => {
-      mockEnvWithIpfsAsStorage()
       app = await createHttpServer()
     })
-
     it('returns 200 along with the report', async () => {
       const packageVersion = process.env.npm_package_version ? process.env.npm_package_version : 'unknown'
 
@@ -39,10 +37,11 @@ describe('health checks', function () {
     })
   })
   describe('with azure as storage', function () {
-    beforeEach(async () => {
+    before(async () => {
       mockEnvWithAzuriteAsStorage()
       app = await createHttpServer()
     })
+
     it('returns 200 along with the report', async () => {
       const packageVersion = process.env.npm_package_version ? process.env.npm_package_version : 'unknown'
 
@@ -60,7 +59,7 @@ describe('health checks', function () {
     })
   })
   describe('with s3 as storage', function () {
-    beforeEach(async () => {
+    before(async () => {
       mockEnvWithS3AsStorage()
       app = await createHttpServer()
     })
