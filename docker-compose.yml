@@ -210,6 +210,7 @@ services:
   minio:
     image: bitnami/minio:latest
     container_name: minio
+    user: '1001:1001'
     ports:
       - 9000:9000
       - 9001:9001
@@ -217,7 +218,7 @@ services:
       - MINIO_ROOT_USER=minio
       - MINIO_ROOT_PASSWORD=password
     volumes:
-      - /tmp/minio-data:/data
+      - minio-storage:/data
     command: server /data --console-address ":9001"
 
   keycloak:
@@ -253,3 +254,4 @@ volumes:
   identity-storage:
   attachment-api-storage-b:
   identity-storage-b:
+  minio-storage:
