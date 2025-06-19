@@ -1,3 +1,5 @@
+import type { Knex } from 'knex'
+
 export const pgConfig = {
   client: 'pg',
   timezone: 'UTC',
@@ -14,11 +16,10 @@ export const pgConfig = {
   },
   migrations: {
     tableName: 'migrations',
-    directory: './src/lib/db/migrations',
   },
 }
 
-const config = {
+const config: { [key: string]: Knex.Config } = {
   test: pgConfig,
   development: pgConfig,
   production: {
@@ -29,10 +30,6 @@ const config = {
       user: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-    },
-    migrations: {
-      ...pgConfig.migrations,
-      directory: './build/lib/db/migrations',
     },
   },
 }

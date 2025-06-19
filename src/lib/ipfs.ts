@@ -1,9 +1,12 @@
 import type { Logger } from 'pino'
-import { singleton } from 'tsyringe'
+import { inject, injectable } from 'tsyringe'
 import { z } from 'zod'
 
 import { serviceState } from './service-watcher/statusPoll.js'
 import { HttpResponse } from './error-handler/index.js'
+import { Env, EnvToken, type IPFSEnv } from '../env.js'
+import { LoggerToken } from './logger.js'
+import { HashType } from './db/types.js'
 
 interface FilestoreResponse {
   Name: string
@@ -12,7 +15,7 @@ interface FilestoreResponse {
 }
 
 export interface MetadataFile {
-  blob: Blob
+  buffer: Buffer
   filename: string
 }
 
@@ -43,29 +46,32 @@ const peersValidator = z.object({
     )
     .nullable(),
 })
-
-@singleton()
+@injectable()
 export default class Ipfs {
   private addUrl: string
   private dirUrl: (dirHash: string) => string
   private fileUrl: (fileHash: string) => string
-  private logger: Logger
   private versionURL: string
   private peersURL: string
 
-  constructor({ host, port, logger }: { host: string; port: number; logger: Logger }) {
-    this.addUrl = `http://${host}:${port}/api/v0/add?cid-version=0&wrap-with-directory=true`
-    this.dirUrl = (dirHash) => `http://${host}:${port}/api/v0/ls?arg=${dirHash}`
-    this.fileUrl = (fileHash) => `http://${host}:${port}/api/v0/cat?arg=${fileHash}`
+  constructor(
+    @inject(EnvToken) private env: IPFSEnv,
+    @inject(LoggerToken) private logger: Logger
+  ) {
+    this.addUrl = `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/add?cid-version=0&wrap-with-directory=true`
+    this.dirUrl = (dirHash) => `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/ls?arg=${dirHash}`
+    this.fileUrl = (fileHash) => `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/cat?arg=${fileHash}`
 
-    this.logger = logger.child({ module: 'ipfs' })
-    this.versionURL = `http://${host}:${port}/api/v0/version`
-    this.peersURL = `http://${host}:${port}/api/v0/swarm/peers`
+    this.versionURL = `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/version`
+    this.peersURL = `http://${this.env.IPFS_HOST}:${this.env.IPFS_PORT}/api/v0/swarm/peers`
+    this.logger.child({ module: 'ipfs' })
   }
 
-  async addFile({ blob, filename }: MetadataFile): Promise<string> {
+  async addFile({ buffer, filename }: MetadataFile): Promise<{ integrityHash: string; hashType: HashType }> {
     this.logger.debug('Uploading file %s', filename)
     const form = new FormData()
+    const blob = new Blob([buffer])
+
     form.append('file', blob, filename)
     const res = await fetch(this.addUrl, {
       method: 'POST',
@@ -86,10 +92,10 @@ export default class Ipfs {
 
     const hash = findHash(json)
     this.logger.debug('Upload of file %s succeeded. Hash is %s', filename, hash)
-    return hash
+    return { integrityHash: hash, hashType: 'cidv0' }
   }
 
-  async getFile(hash: string): Promise<MetadataFile> {
+  async getFile(hash: string) {
     const dirUrl = this.dirUrl(hash)
     const dirRes = await fetch(dirUrl, { method: 'POST' })
     if (!dirRes.ok || !dirRes.body) {
@@ -110,7 +116,9 @@ export default class Ipfs {
     const fileRes = await fetch(fileUrl, { method: 'POST' })
     if (!fileRes.ok) throw new Error(`Error fetching file from IPFS (${fileRes.status}): ${await fileRes.text()}`)
 
-    return { blob: await fileRes.blob(), filename }
+    const blob = await fileRes.blob()
+    const buffer = Buffer.from(await blob.arrayBuffer())
+    return { buffer, filename }
   }
 
   getStatus = async () => {
@@ -175,4 +183,8 @@ const findHash = (filestoreResponse: FilestoreResponse[]) => {
   } else {
     throw new HttpResponse({ code: 500, message: 'ipfs failed to make directory' })
   }
+}
+
+export function isIpfsEnv(env: Env): env is IPFSEnv {
+  return env.STORAGE_BACKEND_MODE === 'IPFS'
 }

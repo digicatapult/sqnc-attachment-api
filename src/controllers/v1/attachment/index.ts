@@ -19,7 +19,11 @@ import {
 import { Logger } from 'pino'
 import express from 'express'
 import { Readable } from 'node:stream'
-
+import { importer } from 'ipfs-unixfs-importer'
+import { MemoryBlockstore } from 'blockstore-core'
+import { fixedSize } from 'ipfs-unixfs-importer/chunker'
+import all from 'it-all'
+import { StorageToken } from '../../../lib/storageClass/index.js'
 import { logger } from '../../../lib/logger.js'
 import Database from '../../../lib/db/index.js'
 import {
@@ -31,15 +35,17 @@ import {
 import { BadRequest, Forbidden, NotFound, UnknownError } from '../../../lib/error-handler/index.js'
 import type { UUID, DATE } from '../../../models/strings.js'
 import Ipfs from '../../../lib/ipfs.js'
-import env from '../../../env.js'
 import { parseDateParam } from '../../../lib/utils/queryParams.js'
-import { AttachmentRow, Where } from '../../../lib/db/types.js'
+import { AttachmentRow, HashType, Where } from '../../../lib/db/types.js'
 import Identity from '../../../lib/identity.js'
-import { injectable } from 'tsyringe'
+import { inject, injectable } from 'tsyringe'
 import { TsoaExpressUser } from '@digicatapult/tsoa-oauth-express'
 import { z } from 'zod'
 import Authz from '../../../lib/authz.js'
 import { ExternalAttachmentService } from '../../../lib/externalAttachment/index.js'
+import StorageClass from '../../../lib/storageClass/index.js'
+import { CID } from 'multiformats/cid'
+import { sha256HashFromBuffer } from '../../../lib/utils/hashing.js'
 
 const parseAccept = (acceptHeader: string) =>
   acceptHeader
@@ -82,16 +88,12 @@ const externalJwtParser = z.object({
 @Tags('attachment')
 export class AttachmentController extends Controller {
   log: Logger
-  ipfs: Ipfs = new Ipfs({
-    host: env.IPFS_HOST,
-    port: env.IPFS_PORT,
-    logger,
-  })
-
-  //keep a log of looked up identities for this request to make sure they are consistently applied
+  // keep a log of looked up identities for this request to make sure they are consistently applied
   memoisedIdentities: Map<string, string> = new Map()
 
   constructor(
+    @inject(StorageToken) private storage: Ipfs | StorageClass,
+
     private db: Database,
     private identity: Identity,
     private authz: Authz,
@@ -168,17 +170,14 @@ export class AttachmentController extends Controller {
     const fileBuffer = file?.buffer ? Buffer.from(file?.buffer) : Buffer.from(JSON.stringify(req.body))
     const fileBlob = new Blob([fileBuffer])
 
-    const [integrityHash, self] = await Promise.all([
-      this.ipfs.addFile.apply(this.ipfs, [{ blob: fileBlob, filename }]),
-      this.identity.getMemberBySelf.apply(this.identity),
-    ])
+    const { integrityHash, self, hashType } = await this.uploadFile(fileBuffer, filename)
 
-    this.rememberThem(self)
     const [res] = await this.db.insert('attachment', {
       filename,
       owner: self.address,
       integrity_hash: integrityHash,
       size: fileBlob.size,
+      encoding: hashType,
     })
 
     return this.transformAttachment(res)
@@ -191,12 +190,14 @@ export class AttachmentController extends Controller {
     const { ownerAddress, integrityHash } = this.parseInternalCreateBody(req.body)
 
     this.log.debug(`creating an internal attachment with hash: ${integrityHash} for owner: ${ownerAddress}`)
+    const hashType = this.identifyHash(integrityHash)
 
     const [res] = await this.db.insert('attachment', {
       owner: ownerAddress,
       integrity_hash: integrityHash,
       filename: null,
       size: null,
+      encoding: hashType,
     })
 
     return this.transformAttachment(res)
@@ -209,6 +210,16 @@ export class AttachmentController extends Controller {
       this.log.warn('Invalid body for internal attachment creation: %s', err instanceof Error ? err.message : 'unknown')
       throw new BadRequest('Invalid body for internal attachment creation')
     }
+  }
+  private async uploadFile(buffer: Buffer, filename: string) {
+    let self: {
+      address: string
+      alias: string
+    } | null = null
+    const { integrityHash, hashType } = await this.storage.addFile({ buffer, filename })
+    self = await this.identity.getMemberBySelf()
+    this.rememberThem(self)
+    return { integrityHash, self, hashType }
   }
   @Get('/{idOrHash}')
   @Security('oauth2')
@@ -289,18 +300,22 @@ export class AttachmentController extends Controller {
     attachment: AttachmentRow,
     self: { address: string }
   ): Promise<{ buffer: Buffer<ArrayBuffer>; filename: string }> {
+    let updatedFilename: string | null = attachment.filename
     // If the attachment is from another owner, get it from peer
     if (attachment.owner !== self.address) {
       const { blobBuffer, filename } = await this.externalAttachmentService.getAttachmentFromPeer(attachment)
       if (attachment.filename === null && filename) {
+        const hashType = this.identifyHash(attachment.integrity_hash)
         try {
           await this.db.update(
             'attachment',
             { id: attachment.id },
             {
               filename: filename,
+              encoding: hashType,
             }
           )
+          updatedFilename = filename
         } catch (err) {
           const message = err instanceof Error ? err.message : 'unknown'
           this.log.warn('Error updating attachment filename: %s', message)
@@ -309,30 +324,36 @@ export class AttachmentController extends Controller {
       return { buffer: blobBuffer, filename: filename || 'external' }
     }
 
-    // Get from IPFS
-    const { blob, filename: ipfsFilename } = await this.ipfs.getFile(attachment.integrity_hash)
-    const buffer = Buffer.from(await blob.arrayBuffer())
-
-    // Update attachment metadata if needed
-    if (attachment.size === null || attachment.filename === null) {
-      try {
-        await this.db.update(
-          'attachment',
-          { id: attachment.id },
-          {
-            filename: ipfsFilename,
-            size: blob.size,
-          }
-        )
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'unknown'
-        this.log.warn('Error updating attachment size: %s', message)
-      }
+    const { buffer, filename } = await this.storage.getFile(attachment.integrity_hash)
+    if (attachment.filename === null && filename) {
+      await this.db.update('attachment', { id: attachment.id }, { filename: filename })
+      updatedFilename = filename
     }
+
+    if (!buffer) {
+      throw new NotFound('Unable to retrieve attachment.')
+    }
+    if (!updatedFilename) {
+      throw new NotFound('Unable to retrieve attachment filename.')
+    }
+    await this.verifyFileIntegrity(buffer, attachment, updatedFilename)
 
     return {
       buffer,
-      filename: attachment.filename || ipfsFilename,
+      filename: updatedFilename,
+    }
+  }
+
+  private async verifyFileIntegrity(buffer: Buffer, attachment: AttachmentRow, filename: string): Promise<void> {
+    if (!filename) {
+      throw new BadRequest('Unable to retrieve attachment filename. Cannot confirm hash integrity.')
+    }
+    const encoding = this.identifyHash(attachment.integrity_hash)
+    const retrievedHash = await this.hashFromBuffer(buffer, filename, encoding)
+
+    if (retrievedHash !== attachment.integrity_hash) {
+      this.log.error('File integrity check failed for attachment %s', attachment.id)
+      throw new BadRequest('File integrity check failed')
     }
   }
 
@@ -378,5 +399,49 @@ export class AttachmentController extends Controller {
   private rememberThem({ alias, address }: { alias: string; address: string }) {
     this.memoisedIdentities.set(alias, address)
     this.memoisedIdentities.set(address, alias)
+  }
+
+  private identifyHash(input: string): HashType {
+    try {
+      this.log.debug('Trying to parse hash as CID for %s', input)
+      const cid = CID.parse(input)
+      if (cid.version === 1) throw new BadRequest('CID v1 is not supported')
+      if (cid.version === 0) return 'cidv0'
+    } catch {
+      this.log.debug('Not a valid CID')
+    }
+    this.log.debug('Not a valid CID, trying to parse hash as SHA-256')
+    const sha256Regex = /^[a-fA-F0-9]{64}$/
+    if (sha256Regex.test(input)) {
+      return 'sha256'
+    }
+
+    throw new BadRequest('Invalid hash type')
+  }
+  private async hashFromBuffer(buffer: Buffer, filename: string, encoding: HashType) {
+    if (encoding === 'cidv0') {
+      this.log.debug('Generating CIDv0 hash from buffer')
+      const file = {
+        content: buffer,
+        path: filename, // need filename to produce correct cid
+      }
+      const blockstore = new MemoryBlockstore()
+
+      const entries = await all(
+        importer([file], blockstore, {
+          cidVersion: 0,
+          rawLeaves: false,
+          wrapWithDirectory: true,
+          chunker: fixedSize({ chunkSize: 262144 }), // 256 KB chunks
+        })
+      )
+      const root = entries.at(-1)
+      if (!root) {
+        throw new Error('No root found')
+      }
+      return root.cid.toString()
+    }
+    this.log.debug('Generating SHA-256 hash from buffer')
+    return sha256HashFromBuffer(buffer)
   }
 }

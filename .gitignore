@@ -5,6 +5,8 @@ build
 src/swagger.json
 src/routes.ts
 dist
+azurite-data/
+minio/
 
 .npm
 .env

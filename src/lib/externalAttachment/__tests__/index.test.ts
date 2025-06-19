@@ -5,8 +5,10 @@ import { ExternalAttachmentService } from '../index.js'
 import { expect } from 'chai'
 import sinon from 'sinon'
 import { type MockContext, withAuthzMock, withIdentityMock } from '../../../../test/helper/mock.js'
+import { resetContainer } from '../../../ioc.js'
 
 describe('ExternalAttachmentService', () => {
+  resetContainer()
   const context: MockContext = {}
   withIdentityMock(context)
   withAuthzMock(context)

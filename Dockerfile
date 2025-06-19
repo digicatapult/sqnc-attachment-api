@@ -22,7 +22,6 @@ RUN apk add --no-cache coreutils curl
 RUN npm -g install npm@10.x.x
 
 COPY package*.json ./
-COPY knexfile.js ./
 
 RUN npm ci --production
 

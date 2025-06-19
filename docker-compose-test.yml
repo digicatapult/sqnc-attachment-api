@@ -22,6 +22,30 @@ services:
     volumes:
       - ./docker/keycloak:/opt/keycloak/data/import
     command: start-dev --import-realm
+  minio:
+    image: bitnami/minio:latest
+    container_name: minio
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=password
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite
+    ports:
+      - 10000:10000
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000
 
 volumes:
   attachment-api-storage:
+  minio-data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=100m,uid=1001
