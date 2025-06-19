@@ -16,8 +16,8 @@
     "test:integration": "NODE_ENV=test ./node_modules/.bin/mocha --config ./test/mocharc.json ./test/integration/*.test.ts",
     "test:unit": "NODE_ENV=test ./node_modules/.bin/mocha --config ./test/mocharc.json ./src/**/*.test.ts",
     "db:cmd": "node --import @swc-node/register/esm-register ./node_modules/.bin/knex",
-    "db:migrate": "npm run db:cmd -- migrate:latest",
-    "db:rollback": "npm run db:cmd -- migrate:rollback"
+    "db:migrate": "npm run db:cmd -- migrate:latest --knexfile src/lib/db/knexfile.ts",
+    "db:rollback": "npm run db:cmd -- migrate:rollback --knexfile src/lib/db/knexfile.ts"
   },
   "repository": {
     "type": "git",
