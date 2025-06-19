@@ -115,6 +115,10 @@ npm i -g knex
 npx knex migrate:make attachment-table
 ```
 
+## Backend Options
+
+We now have the option to select from different backends - `IPFS`, `AZURE` and `S3` (use also for Minio). Each requires a different set of envs to be set. This should be clear for the structure of the env itself.
+
 ## Tests
 
 Unit tests are executed by calling:
