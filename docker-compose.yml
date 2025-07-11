@@ -63,7 +63,7 @@ services:
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.2.55
+    image: digicatapult/sqnc-identity-service:v4.2.58
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -136,7 +136,7 @@ services:
       timeout: 5s
       retries: 5
   sqnc-identity-service-b:
-    image: digicatapult/sqnc-identity-service:v4.2.55
+    image: digicatapult/sqnc-identity-service:v4.2.58
     container_name: identity-service-b
     depends_on:
       postgres-identity-service-b:
@@ -221,7 +221,7 @@ services:
     command: server /data --console-address ":9001"
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.2.5
+    image: quay.io/keycloak/keycloak:26.3.1
     container_name: keycloak
     environment:
       - KEYCLOAK_ADMIN=admin
