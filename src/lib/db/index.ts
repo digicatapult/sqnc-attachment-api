@@ -24,7 +24,9 @@ export default class Database {
     model: M,
     record: Models[typeof model]['insert']
   ): Promise<Models[typeof model]['get'][]> => {
-    return z.array(Zod[model].get).parse(await this.db[model]().insert(record).returning('*'))
+    return z
+      .array(Zod[model].get)
+      .parse(await this.db[model]().insert(record).returning('*')) as Models[typeof model]['get'][]
   }
 
   delete = async <M extends TABLE>(model: M, where: Where<M>): Promise<void> => {
@@ -44,7 +46,7 @@ export default class Database {
     })
     query = reduceWhere(query, where)
 
-    return z.array(Zod[model].get).parse(await query.returning('*'))
+    return z.array(Zod[model].get).parse(await query.returning('*')) as Models[typeof model]['get'][]
   }
 
   increment = async <M extends TABLE>(
@@ -56,7 +58,7 @@ export default class Database {
     let query = this.db[model]()
     query = reduceWhere(query, where)
     query = query.increment(column, amount)
-    return z.array(Zod[model].get).parse(await query.returning('*'))
+    return z.array(Zod[model].get).parse(await query.returning('*')) as Models[typeof model]['get'][]
   }
 
   get = async <M extends TABLE>(
@@ -72,7 +74,7 @@ export default class Database {
     }
     if (limit !== undefined) query = query.limit(limit)
     const result = await query
-    return z.array(Zod[model].get).parse(result)
+    return z.array(Zod[model].get).parse(result) as Models[typeof model]['get'][]
   }
 
   withTransaction = (update: (db: Database) => Promise<void>) => {
