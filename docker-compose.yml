@@ -208,7 +208,7 @@ services:
       - 8080:8080
       - 5001:5001
   minio:
-    image: bitnami/minio:latest
+    image: bitnamilegacy/minio:latest
     container_name: minio
     ports:
       - 9000:9000

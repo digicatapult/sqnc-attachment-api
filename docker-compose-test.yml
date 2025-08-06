@@ -23,7 +23,7 @@ services:
       - ./docker/keycloak:/opt/keycloak/data/import
     command: start-dev --import-realm
   minio:
-    image: bitnami/minio:latest
+    image: bitnamilegacy/minio:latest
     container_name: minio
     ports:
       - 9000:9000
