@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "check": "npm run build:tsoa && tsc --noEmit",
     "depcheck": "depcheck",
-    "build:tsoa": "NODE_OPTIONS='--no-experimental-strip-types' tsoa spec-and-routes",
+    "build:tsoa": "tsoa spec-and-routes",
     "build": "tsoa spec-and-routes && swc ./src -d ./build --strip-leading-paths --copy-files",
     "start": "node build/index.js",
     "dev": "concurrently \"NODE_ENV=dev nodemon | pino-colada\" \"nodemon -x tsoa spec-and-routes --ignore src/routes.ts --ignore src/swagger.json\"",
