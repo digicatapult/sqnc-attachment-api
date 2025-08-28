@@ -60,12 +60,12 @@ export default class StorageClass {
 
     const createdBucket = await this.storage.createBucket(this.env.STORAGE_BACKEND_BUCKET_NAME)
     if (createdBucket.error !== null) {
-      this.logger.error('Failed to create bucket: %j', createdBucket.error)
+      this.logger.error('Failed to create bucket: %s', createdBucket.error)
       throw new Error('Failed to create bucket')
     }
   }
 
-  async addFile({ buffer, filename }: { buffer: Buffer; filename?: string }): Promise<{
+  async addFile({ buffer, filename }: { buffer: Buffer; filename: string }): Promise<{
     integrityHash: string
     hashType: HashType
   }> {
@@ -79,7 +79,7 @@ export default class StorageClass {
       bucketName: this.env.STORAGE_BACKEND_BUCKET_NAME,
     })
     if (upload.error !== null) {
-      this.logger.error('Failed to upload file: %j', upload.error)
+      this.logger.error('Failed to upload file: %s', upload.error)
       throw new Error('Failed to upload file')
     }
     return { integrityHash, hashType: 'sha256' }
@@ -90,7 +90,7 @@ export default class StorageClass {
 
     const stream = await this.storage.getFileAsStream(this.env.STORAGE_BACKEND_BUCKET_NAME, hash)
     if (stream.error !== null) {
-      this.logger.error('Failed to retrieve file: %j', stream.error)
+      this.logger.error('Failed to retrieve file: %s', stream.error)
       throw new NotFound(`Failed to retrieve file with filename: ${hash}`)
     }
 
@@ -156,7 +156,7 @@ export default class StorageClass {
 const logStatusError = (logger: Logger, details: unknown) => {
   if (details instanceof Error) {
     logger.error('Error getting status from storage. Message: %s', details.message)
-    logger.debug('Error getting status from storage. Stack: %j', details.stack)
+    logger.debug('Error getting status from storage. Stack: %s', details.stack ?? 'no stack')
   } else {
     logger.error('Error getting status from storage: %s', JSON.stringify(details))
   }
