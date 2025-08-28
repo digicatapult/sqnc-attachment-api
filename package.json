@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -13,8 +13,8 @@
     "start": "node build/index.js",
     "dev": "concurrently \"NODE_ENV=dev nodemon | pino-colada\" \"nodemon -x tsoa spec-and-routes --ignore src/routes.ts --ignore src/swagger.json\"",
     "dev:telemetry": "concurrently -k \"NODE_ENV=dev NODE_OPTIONS='--require @opentelemetry/auto-instrumentations-node/register' GRPC_INSECURE=true OTEL_SERVICE_NAME='sqnc-attachment-api' OTEL_EXPORTER_OTLP_TRACES_PROTOCOL='grpc' OTEL_EXPORTER_OTLP_TRACES_ENDPOINT='http://localhost:4317' OTEL_TRACES_EXPORTER='otlp' OTEL_PROPAGATORS='tracecontext,baggage' nodemon | pino-colada\" \"nodemon -x tsoa spec-and-routes --ignore src/routes.ts --ignore src/swagger.json\"",
-    "test:integration": "NODE_ENV=test ./node_modules/.bin/mocha --config ./test/mocharc.json ./test/integration/*.test.ts",
-    "test:unit": "NODE_ENV=test ./node_modules/.bin/mocha --config ./test/mocharc.json ./src/**/*.test.ts",
+    "test:integration": "NODE_OPTIONS=--no-experimental-strip-types NODE_ENV=test ./node_modules/.bin/mocha --config ./test/mocharc.json ./test/integration/*.test.ts",
+    "test:unit": "NODE_OPTIONS=--no-experimental-strip-types NODE_ENV=test ./node_modules/.bin/mocha --config ./test/mocharc.json ./src/**/*.test.ts",
     "db:cmd": "node --import @swc-node/register/esm-register ./node_modules/.bin/knex",
     "db:migrate": "npm run db:cmd -- migrate:latest --knexfile src/lib/db/knexfile.ts",
     "db:rollback": "npm run db:cmd -- migrate:rollback --knexfile src/lib/db/knexfile.ts"
