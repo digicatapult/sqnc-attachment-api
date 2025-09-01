@@ -288,7 +288,7 @@ export class AttachmentController extends Controller {
 
     const parseRes = externalJwtParser.safeParse(user.jwt)
     if (!parseRes.success) {
-      this.log.debug('Failed to parse jwt object. Got %j', user.jwt)
+      this.log.debug(user.jwt, 'Failed to parse jwt object')
       throw new Forbidden()
     }
 
@@ -299,7 +299,7 @@ export class AttachmentController extends Controller {
   private async getAttachmentBuffer(
     attachment: AttachmentRow,
     self: { address: string }
-  ): Promise<{ buffer: Buffer<ArrayBuffer>; filename: string }> {
+  ): Promise<{ buffer: Buffer; filename: string }> {
     let updatedFilename: string | null = attachment.filename
     // If the attachment is from another owner, get it from peer
     if (attachment.owner !== self.address) {

@@ -70,7 +70,7 @@ export default class Ipfs {
   async addFile({ buffer, filename }: MetadataFile): Promise<{ integrityHash: string; hashType: HashType }> {
     this.logger.debug('Uploading file %s', filename)
     const form = new FormData()
-    const blob = new Blob([buffer])
+    const blob = new Blob([new Uint8Array(buffer)])
 
     form.append('file', blob, filename)
     const res = await fetch(this.addUrl, {
@@ -169,7 +169,7 @@ export default class Ipfs {
 const logStatusError = (logger: Logger, details: unknown) => {
   if (details instanceof Error) {
     logger.error('Error getting status from IPFS node. Message: %s', details.message)
-    logger.debug('Error getting status from IPFS node. Stack: %j', details.stack)
+    logger.debug('Error getting status from IPFS node. Stack: %s', details.stack ?? 'no stack')
   } else {
     logger.error('Error getting status from IPFS node: %s', JSON.stringify(details))
   }

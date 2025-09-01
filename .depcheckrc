@@ -1,6 +1,7 @@
 ignores: [
   '@swc-node/register',
   '@swc/cli',
+  '@swc/core',
   'concurrently',
   'pino-colada',
   'nodemon',
@@ -9,5 +10,5 @@ ignores: [
   '@grpc/grpc-js',
   '@opentelemetry/auto-instrumentations-node',
   '@tweedegolf/sab-adapter-amazon-s3',
-  '@tweedegolf/sab-adapter-azure-blob'
+  '@tweedegolf/sab-adapter-azure-blob',
 ]
