@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "3.3.5",
+  "version": "3.3.6",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -59,7 +59,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "globals": "^16.3.0",
-    "mocha": "^11.7.1",
+    "mocha": "^11.7.2",
     "nodemon": "^3.1.10",
     "pino-colada": "^2.2.2",
     "prettier": "^3.6.2",
@@ -70,9 +70,9 @@
     "undici": "^7.15.0"
   },
   "dependencies": {
-    "@digicatapult/tsoa-oauth-express": "^2.0.22",
+    "@digicatapult/tsoa-oauth-express": "^2.0.23",
     "@grpc/grpc-js": "^1.13.4",
-    "@opentelemetry/auto-instrumentations-node": "^0.62.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.62.2",
     "@tsoa/runtime": "^6.6.0",
     "@tweedegolf/sab-adapter-amazon-s3": "^1.0.17",
     "@tweedegolf/sab-adapter-azure-blob": "^1.0.7",
