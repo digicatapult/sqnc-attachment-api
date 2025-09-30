@@ -34,7 +34,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - attachment-api-storage:/var/lib/postgresql/data
+      - attachment-api-storage:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
@@ -51,7 +51,7 @@ services:
     ports:
       - 5433:5432
     volumes:
-      - identity-storage:/var/lib/postgresql/data
+      - identity-storage:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
@@ -125,7 +125,7 @@ services:
     ports:
       - 5434:5432
     volumes:
-      - attachment-api-storage-b:/var/lib/postgresql/data
+      - attachment-api-storage-b:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
@@ -166,7 +166,7 @@ services:
     ports:
       - 5435:5432
     volumes:
-      - identity-storage-b:/var/lib/postgresql/data
+      - identity-storage-b:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
