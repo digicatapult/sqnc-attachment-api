@@ -29,12 +29,12 @@ services:
       - IDP_INTERNAL_CLIENT_SECRET=secret
 
   postgres-attachment-api:
-    image: postgres:17.6-alpine
+    image: postgres:18.0-alpine
     container_name: postgres-attachment-api
     ports:
       - 5432:5432
     volumes:
-      - attachment-api-storage:/var/lib/postgresql/data
+      - attachment-api-storage:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
@@ -46,12 +46,12 @@ services:
       retries: 5
 
   postgres-identity-service:
-    image: postgres:17.6-alpine
+    image: postgres:18.0-alpine
     container_name: postgres-identity
     ports:
       - 5433:5432
     volumes:
-      - identity-storage:/var/lib/postgresql/data
+      - identity-storage:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
@@ -120,12 +120,12 @@ services:
       - IPFS_PORT=5001
 
   postgres-attachment-api-b:
-    image: postgres:17.6-alpine
+    image: postgres:18.0-alpine
     container_name: postgres-attachment-api-b
     ports:
       - 5434:5432
     volumes:
-      - attachment-api-storage-b:/var/lib/postgresql/data
+      - attachment-api-storage-b:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
@@ -161,12 +161,12 @@ services:
       - LOG_LEVEL=debug
 
   postgres-identity-service-b:
-    image: postgres:17.6-alpine
+    image: postgres:18.0-alpine
     container_name: postgres-identity-service-b
     ports:
       - 5435:5432
     volumes:
-      - identity-storage-b:/var/lib/postgresql/data
+      - identity-storage-b:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
