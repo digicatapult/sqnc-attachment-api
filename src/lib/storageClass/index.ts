@@ -77,6 +77,11 @@ export default class StorageClass {
       buffer: buffer,
       targetPath: integrityHash,
       bucketName: this.env.STORAGE_BACKEND_BUCKET_NAME,
+      options: {
+        // Use signed URLs to bypass _getPublicURL issue with localhost endpoints
+        // where s3Type cannot be properly detected in @tweedegolf/storage-abstraction
+        useSignedURL: true,
+      },
     })
     if (upload.error !== null) {
       this.logger.error('Failed to upload file: %s', upload.error)

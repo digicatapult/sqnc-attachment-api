@@ -134,6 +134,7 @@ describe('StorageClass', () => {
           buffer: mockFileBuffer,
           targetPath: hashFromMockFileBuffer,
           bucketName: 'test',
+          options: { useSignedURL: true },
         })
       ).to.be.equal(true)
       expect(res).to.deep.equal({ integrityHash: hashFromMockFileBuffer, hashType: 'sha256' })
@@ -184,6 +185,7 @@ describe('StorageClass', () => {
           buffer: mockFileBuffer,
           targetPath: hashFromMockFileBuffer,
           bucketName: 'test',
+          options: { useSignedURL: true },
         })
       ).to.be.equal(true)
     })
