@@ -63,7 +63,7 @@ services:
       retries: 5
 
   sqnc-identity-service:
-    image: digicatapult/sqnc-identity-service:v4.2.91
+    image: digicatapult/sqnc-identity-service:v4.2.96
     container_name: identity-service
     depends_on:
       postgres-identity-service:
@@ -136,7 +136,7 @@ services:
       timeout: 5s
       retries: 5
   sqnc-identity-service-b:
-    image: digicatapult/sqnc-identity-service:v4.2.91
+    image: digicatapult/sqnc-identity-service:v4.2.96
     container_name: identity-service-b
     depends_on:
       postgres-identity-service-b:
@@ -196,7 +196,7 @@ services:
     restart: on-failure
 
   ipfs:
-    image: ipfs/go-ipfs:v0.37.0
+    image: ipfs/go-ipfs:v0.38.0
     container_name: ipfs
     environment:
       - |
