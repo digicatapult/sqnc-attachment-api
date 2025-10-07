@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "3.3.25",
+  "version": "3.3.26",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -84,7 +84,7 @@
     "envalid": "^8.1.0",
     "express": "^5.1.0",
     "express-prom-bundle": "^8.0.0",
-    "ipfs-unixfs-importer": "^15.4.0",
+    "ipfs-unixfs-importer": "^16.0.1",
     "it-all": "^3.0.9",
     "knex": "^3.1.0",
     "moment": "^2.30.1",
