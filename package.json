@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "3.3.29",
+  "version": "3.3.30",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -74,7 +74,7 @@
     "@grpc/grpc-js": "^1.14.0",
     "@opentelemetry/auto-instrumentations-node": "^0.64.1",
     "@tsoa/runtime": "^6.6.0",
-    "@tweedegolf/sab-adapter-amazon-s3": "^1.0.18",
+    "@tweedegolf/sab-adapter-amazon-s3": "^3.0.1",
     "@tweedegolf/sab-adapter-azure-blob": "^3.0.0",
     "@tweedegolf/storage-abstraction": "^2.2.0",
     "blockstore-core": "^6.0.2",
