@@ -1,7 +1,7 @@
 import { type Logger } from 'pino'
 import { inject, injectable } from 'tsyringe'
 import { LoggerToken } from '../logger.js'
-import { StorageType, Storage, StorageAdapterConfig } from '@tweedegolf/storage-abstraction'
+import { Storage, StorageAdapterConfig, Provider } from '@tweedegolf/storage-abstraction'
 import { AzureEnv, type Env, EnvToken, S3Env } from '../../env.js'
 import { ResultObjectStream } from '@tweedegolf/storage-abstraction/dist/types/result.js'
 import { NotFound } from '../error-handler/index.js'
@@ -23,7 +23,7 @@ export default class StorageClass {
     }
     if (isS3Env(env)) {
       this.config = {
-        type: StorageType.S3, // localstack and minio config
+        provider: Provider.S3, // localstack and minio config
         accessKeyId: env.STORAGE_BACKEND_ACCESS_KEY_ID,
         secretAccessKey: env.STORAGE_BACKEND_SECRET_ACCESS_KEY,
         endpoint: `${env.STORAGE_BACKEND_PROTOCOL}://${env.STORAGE_BACKEND_HOST}:${env.STORAGE_BACKEND_PORT}`,
@@ -33,7 +33,7 @@ export default class StorageClass {
       }
     } else {
       this.config = {
-        type: StorageType.AZURE, // azure config
+        provider: Provider.AZURE, // azure config
         connectionString: `DefaultEndpointsProtocol=${env.STORAGE_BACKEND_PROTOCOL};AccountName=${env.STORAGE_BACKEND_ACCOUNT_NAME};AccountKey=${env.STORAGE_BACKEND_ACCOUNT_SECRET};BlobEndpoint=${env.STORAGE_BACKEND_PROTOCOL}://${env.STORAGE_BACKEND_HOST}:${env.STORAGE_BACKEND_PORT}/${env.STORAGE_BACKEND_ACCOUNT_NAME}`,
       }
     }
