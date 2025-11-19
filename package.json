@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "3.3.42",
+  "version": "3.3.43",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -78,7 +78,7 @@
     "@tweedegolf/sab-adapter-azure-blob": "^3.0.1",
     "@tweedegolf/storage-abstraction": "^3.0.3",
     "blockstore-core": "^6.1.1",
-    "content-disposition": "^0.5.4",
+    "content-disposition": "^1.0.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "envalid": "^8.1.0",
