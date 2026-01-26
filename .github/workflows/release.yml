@@ -5,16 +5,22 @@ on:
 jobs:
   static-checks-npm:
     uses: digicatapult/shared-workflows/.github/workflows/static-checks-npm.yml@main
+    permissions:
+      security-events: write
     with:
       matrix_commands: '["lint", "depcheck", "check"]'
   tests-unit:
     uses: digicatapult/shared-workflows/.github/workflows/tests-npm.yml@main
+    permissions:
+      pull-requests: write
     with:
       docker_compose_file: ''
       npm_build_command: 'npm run build:tsoa'
       tests: '["test:unit"]'
   tests-integration:
     uses: digicatapult/shared-workflows/.github/workflows/tests-npm.yml@main
+    permissions:
+      pull-requests: write
     with:
       docker_compose_file: './docker-compose-test.yml'
       npm_build_command: 'npm run build:tsoa'
@@ -23,14 +29,13 @@ jobs:
   build-docker:
     needs: [tests-unit, tests-integration, static-checks-npm]
     uses: digicatapult/shared-workflows/.github/workflows/build-docker.yml@main
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
     with:
       push_dockerhub: true
       push_ghcr: true
-    permissions:
-      packages: write
-      contents: write
-      security-events: write
-      actions: read
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.SQNC_DOCKERHUB_TOKEN }}
       DOCKERHUB_USERNAME: ${{ secrets.SQNC_DOCKERHUB_USERNAME }}
