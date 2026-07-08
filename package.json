@@ -1,6 +1,6 @@
 {
   "name": "@digicatapult/sqnc-attachment-api",
-  "version": "3.3.101",
+  "version": "3.3.102",
   "description": "An OpenAPI Matchmaking API service for SQNC",
   "main": "src/index.ts",
   "type": "module",
@@ -53,7 +53,7 @@
     "@typescript-eslint/eslint-plugin": "^8.59.3",
     "@typescript-eslint/parser": "^8.59.3",
     "chai": "^6.2.2",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "depcheck": "^1.4.7",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
