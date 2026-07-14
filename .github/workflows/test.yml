@@ -28,6 +28,8 @@ jobs:
       tests: '["test:integration"]'
   build-docker:
     uses: digicatapult/shared-workflows/.github/workflows/build-docker.yml@main
+    with:
+      scan_container: true
     permissions:
       contents: read
       packages: write
